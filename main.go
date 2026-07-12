@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	runTimeout            = 10 * time.Second
 	reportRootFolder      = "test-results"
 	summarySubfolder      = "summary"
 	maxDiagnosticTextSize = 8000
+	defaultTimeout        = 10 * time.Second
 )
 
 type failureType string
@@ -43,6 +43,7 @@ type config struct {
 	testNumbersInput     string
 	studentFolder        string
 	studentFolderPattern string
+	timeout              time.Duration
 }
 
 type testCase struct {
@@ -93,22 +94,6 @@ type summaryRow struct {
 type summaryReport struct {
 	GeneratedAt time.Time
 	Rows        []summaryRow
-}
-
-type indexEntry struct {
-	Name         string
-	ReportPath   string
-	Total        int
-	Passed       int
-	Failed       int
-	CompileFails int
-	MissingFails int
-}
-
-type indexReportData struct {
-	GeneratedAt time.Time
-	Entries     []indexEntry
-	SummaryPath string
 }
 
 type spaData struct {
@@ -163,6 +148,11 @@ func main() {
 			Name:  "student-folder-pattern, p",
 			Usage: "Glob pattern for student folders",
 		},
+		cli.IntFlag{
+			Name:  "timeout, T",
+			Usage: "Per-test execution timeout in seconds",
+			Value: 10,
+		},
 	}
 
 	app.Action = func(c *cli.Context) error {
@@ -185,6 +175,7 @@ func parseConfig(c *cli.Context) (config, error) {
 		testNumbersInput:     c.String("test-numbers"),
 		studentFolder:        c.String("student-folder"),
 		studentFolderPattern: c.String("student-folder-pattern"),
+		timeout:              time.Duration(c.Int("timeout")) * time.Second,
 	}
 
 	if strings.TrimSpace(cfg.testsFolder) == "" {
@@ -234,7 +225,7 @@ func run(cfg config) error {
 
 	allReports := make([]studentReport, 0, len(studentFolders))
 	for _, studentFolder := range studentFolders {
-		report, err := runForStudent(studentFolder, cfg.testsFolder, exerciseFolders, selectedNumbers)
+		report, err := runForStudent(studentFolder, cfg.testsFolder, exerciseFolders, selectedNumbers, cfg.timeout)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error while running student folder %q: %v\n", studentFolder, err)
 			continue
@@ -412,7 +403,7 @@ func selectTestNumbers(input string, exerciseFolders map[int]string) ([]int, err
 	return out, nil
 }
 
-func runForStudent(studentFolder string, testsFolder string, exerciseFolders map[int]string, selected []int) (studentReport, error) {
+func runForStudent(studentFolder string, testsFolder string, exerciseFolders map[int]string, selected []int, timeout time.Duration) (studentReport, error) {
 	_ = testsFolder
 	report := studentReport{
 		StudentName: filepath.Base(studentFolder),
@@ -461,7 +452,7 @@ func runForStudent(studentFolder string, testsFolder string, exerciseFolders map
 		}
 
 		for _, tc := range testCases {
-			result := executeTestCase(execInfo, exercise, tc)
+			result := executeTestCase(execInfo, exercise, tc, timeout)
 			report.Results = append(report.Results, result)
 		}
 	}
@@ -614,7 +605,7 @@ func prepareExecutable(studentFolder string, exercise int) (executable, error, s
 	}, nil, out.String()
 }
 
-func executeTestCase(execInfo executable, exercise int, tc testCase) testCaseResult {
+func executeTestCase(execInfo executable, exercise int, tc testCase, timeout time.Duration) testCaseResult {
 	result := testCaseResult{
 		Exercise:  exercise,
 		CaseName:  tc.name,
@@ -639,7 +630,7 @@ func executeTestCase(execInfo executable, exercise int, tc testCase) testCaseRes
 		return result
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), runTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	command := execInfo.Runner[0]
@@ -659,7 +650,7 @@ func executeTestCase(execInfo executable, exercise int, tc testCase) testCaseRes
 	if ctx.Err() == context.DeadlineExceeded {
 		result.Passed = false
 		result.FailureType = failureRuntime
-		result.Message = fmt.Sprintf("execution timed out after %s", runTimeout)
+		result.Message = fmt.Sprintf("execution timed out after %s", timeout)
 		result.Actual = trimDiagnostic(stdout.String() + "\n" + stderr.String())
 		return result
 	}
