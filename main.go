@@ -500,15 +500,11 @@ func guessExpectedPath(inputPath string) string {
 }
 
 func extractInputSize(inputPath string) int {
-	data, err := os.ReadFile(inputPath)
-	if err != nil {
+	m := regexp.MustCompile(`\d+`).FindString(filepath.Base(inputPath))
+	if m == "" {
 		return 0
 	}
-	m := regexp.MustCompile(`\d+`).Find(data)
-	if m == nil {
-		return 0
-	}
-	n, err := strconv.Atoi(string(m))
+	n, err := strconv.Atoi(m)
 	if err != nil {
 		return 0
 	}
