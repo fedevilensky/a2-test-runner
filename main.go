@@ -36,6 +36,8 @@ const (
 	failureSourceMissing failureType = "source_missing"
 )
 
+var errSourceMissing = errors.New("source missing")
+
 type config struct {
 	testsFolder          string
 	testNumbersInput     string
@@ -81,17 +83,37 @@ type studentReport struct {
 type summaryRow struct {
 	Exercise     int
 	Total        int
-	Passed       int
-	Failed       int
-	CompileFails int
-	RuntimeFails int
-	DiffFails    int
-	MissingFails int
+	AllPass      int
+	Partial      int
+	AllFail      int
+	CompileFail  int
+	NotSubmitted int
 }
 
 type summaryReport struct {
 	GeneratedAt time.Time
 	Rows        []summaryRow
+}
+
+type indexEntry struct {
+	Name         string
+	ReportPath   string
+	Total        int
+	Passed       int
+	Failed       int
+	CompileFails int
+	MissingFails int
+}
+
+type indexReportData struct {
+	GeneratedAt time.Time
+	Entries     []indexEntry
+	SummaryPath string
+}
+
+type spaData struct {
+	Students []studentReportData
+	Summary  summaryReport
 }
 
 type exerciseGroup struct {
@@ -104,7 +126,13 @@ type exerciseGroup struct {
 
 type studentReportData struct {
 	studentReport
-	Groups []exerciseGroup
+	Groups      []exerciseGroup
+	IndexPath   string
+	SummaryPath string
+	PrevName    string
+	PrevPath    string
+	NextName    string
+	NextPath    string
 }
 
 type executable struct {
@@ -212,10 +240,6 @@ func run(cfg config) error {
 			continue
 		}
 		allReports = append(allReports, report)
-
-		if err := writeStudentReport(report); err != nil {
-			fmt.Fprintf(os.Stderr, "error writing student report for %q: %v\n", studentFolder, err)
-		}
 	}
 
 	if len(allReports) == 0 {
@@ -223,6 +247,33 @@ func run(cfg config) error {
 	}
 
 	summary := buildSummary(allReports)
+
+	studentDatas := make([]studentReportData, 0, len(allReports))
+	for i, report := range allReports {
+		data := studentReportData{
+			studentReport: report,
+			Groups:        groupResultsByExercise(report.Results),
+			IndexPath:     "../index.html",
+			SummaryPath:   "../summary/index.html",
+		}
+		if i > 0 {
+			data.PrevName = allReports[i-1].StudentName
+			data.PrevPath = fmt.Sprintf("../%s/report.html", sanitizeName(allReports[i-1].StudentName))
+		}
+		if i < len(allReports)-1 {
+			data.NextName = allReports[i+1].StudentName
+			data.NextPath = fmt.Sprintf("../%s/report.html", sanitizeName(allReports[i+1].StudentName))
+		}
+		studentDatas = append(studentDatas, data)
+		if err := writeStudentReport(data); err != nil {
+			fmt.Fprintf(os.Stderr, "error writing student report for %q: %v\n", report.StudentName, err)
+		}
+	}
+
+	if err := writeIndexReport(studentDatas, summary); err != nil {
+		fmt.Fprintf(os.Stderr, "error writing index report: %v\n", err)
+	}
+
 	if err := writeSummaryReport(summary); err != nil {
 		return fmt.Errorf("error writing summary report: %w", err)
 	}
@@ -386,6 +437,10 @@ func runForStudent(studentFolder string, testsFolder string, exerciseFolders map
 		}
 
 		if compileErr != nil {
+			ft := failureCompile
+			if errors.Is(compileErr, errSourceMissing) {
+				ft = failureSourceMissing
+			}
 			for _, tc := range testCases {
 				report.Results = append(report.Results, testCaseResult{
 					Exercise:    exercise,
@@ -394,7 +449,7 @@ func runForStudent(studentFolder string, testsFolder string, exerciseFolders map
 					InputSize:   tc.inputSize,
 					Duration:    0,
 					Passed:      false,
-					FailureType: failureCompile,
+					FailureType: ft,
 					Message:     trimDiagnostic(compileOutput),
 				})
 			}
@@ -502,7 +557,7 @@ func prepareExecutable(studentFolder string, exercise int) (executable, error, s
 
 	if !javaExists && !cppExists {
 		msg := fmt.Sprintf("missing source file: expected %s or %s", filepath.Base(javaFile), filepath.Base(cppFile))
-		return executable{}, errors.New(msg), msg
+		return executable{}, fmt.Errorf("%w: %s", errSourceMissing, msg), msg
 	}
 
 	if cppExists {
@@ -670,28 +725,45 @@ func computeStudentTotals(report *studentReport) {
 
 func buildSummary(reports []studentReport) summaryReport {
 	rows := map[int]*summaryRow{}
+
 	for _, report := range reports {
-		for _, result := range report.Results {
-			row, ok := rows[result.Exercise]
-			if !ok {
-				row = &summaryRow{Exercise: result.Exercise}
-				rows[result.Exercise] = row
+		byExercise := map[int][]testCaseResult{}
+		for _, r := range report.Results {
+			byExercise[r.Exercise] = append(byExercise[r.Exercise], r)
+		}
+		for exercise, results := range byExercise {
+			if _, ok := rows[exercise]; !ok {
+				rows[exercise] = &summaryRow{Exercise: exercise}
 			}
+			row := rows[exercise]
 			row.Total++
-			if result.Passed {
-				row.Passed++
-				continue
+
+			notSubmitted := false
+			compileFail := false
+			passed := 0
+			for _, r := range results {
+				switch r.FailureType {
+				case failureSourceMissing:
+					notSubmitted = true
+				case failureCompile:
+					compileFail = true
+				}
+				if r.Passed {
+					passed++
+				}
 			}
-			row.Failed++
-			switch result.FailureType {
-			case failureCompile:
-				row.CompileFails++
-			case failureRuntime:
-				row.RuntimeFails++
-			case failureDiff:
-				row.DiffFails++
-			case failureSourceMissing:
-				row.MissingFails++
+
+			switch {
+			case notSubmitted:
+				row.NotSubmitted++
+			case compileFail:
+				row.CompileFail++
+			case passed == len(results):
+				row.AllPass++
+			case passed == 0:
+				row.AllFail++
+			default:
+				row.Partial++
 			}
 		}
 	}
@@ -707,8 +779,8 @@ func buildSummary(reports []studentReport) summaryReport {
 	return summaryReport{GeneratedAt: time.Now(), Rows: sortedRows}
 }
 
-func writeStudentReport(report studentReport) error {
-	studentDir := filepath.Join(reportRootFolder, sanitizeName(report.StudentName))
+func writeStudentReport(data studentReportData) error {
+	studentDir := filepath.Join(reportRootFolder, sanitizeName(data.StudentName))
 	if err := os.MkdirAll(studentDir, 0o755); err != nil {
 		return err
 	}
@@ -754,10 +826,6 @@ func writeStudentReport(report studentReport) error {
 		return err
 	}
 
-	data := studentReportData{
-		studentReport: report,
-		Groups:        groupResultsByExercise(report.Results),
-	}
 	return tpl.Execute(f, data)
 }
 
@@ -788,6 +856,74 @@ func writeSummaryReport(summary summaryReport) error {
 	return tpl.Execute(f, summary)
 }
 
+func writeIndexReport(students []studentReportData, summary summaryReport) error {
+	data := spaData{Students: students, Summary: summary}
+	f, err := os.Create(filepath.Join(reportRootFolder, "index.html"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	tpl, err := template.New("index").Funcs(template.FuncMap{
+		"pct": func(a, b int) string {
+			if b == 0 {
+				return "0.0%"
+			}
+			return fmt.Sprintf("%.1f%%", float64(a)*100/float64(b))
+		},
+		"fmtDuration": func(d time.Duration) string {
+			return fmt.Sprintf("%.3fs", d.Seconds())
+		},
+		"sanitizeID": sanitizeName,
+		"chartConfig": func(results []testCaseResult) template.JS {
+			type point struct {
+				X     int     `json:"x"`
+				Y     float64 `json:"y"`
+				Label string  `json:"label"`
+			}
+			pts := make([]point, 0, len(results))
+			for _, r := range results {
+				if r.InputSize <= 0 || r.FailureType == failureCompile || r.FailureType == failureSourceMissing {
+					continue
+				}
+				pts = append(pts, point{
+					X:     r.InputSize,
+					Y:     float64(r.Duration.Milliseconds()),
+					Label: r.CaseName,
+				})
+			}
+			cfg := map[string]interface{}{
+				"type": "scatter",
+				"data": map[string]interface{}{
+					"datasets": []interface{}{
+						map[string]interface{}{
+							"label":           "Input Size vs Time (ms)",
+							"data":            pts,
+							"backgroundColor": "rgba(59,130,246,0.7)",
+							"pointRadius":     5,
+						},
+					},
+				},
+				"options": map[string]interface{}{
+					"plugins": map[string]interface{}{
+						"legend": map[string]interface{}{"display": false},
+						"title":  map[string]interface{}{"display": true, "text": "Input Size vs Time"},
+					},
+					"scales": map[string]interface{}{
+						"x": map[string]interface{}{"title": map[string]interface{}{"display": true, "text": "Input Size"}, "type": "linear"},
+						"y": map[string]interface{}{"title": map[string]interface{}{"display": true, "text": "Time (ms)"}, "beginAtZero": true},
+					},
+				},
+			}
+			b, _ := json.Marshal(cfg)
+			return template.JS(b)
+		},
+	}).Parse(indexReportTemplate)
+	if err != nil {
+		return err
+	}
+	return tpl.Execute(f, data)
+}
+
 func printConsoleSummary(allReports []studentReport, summary summaryReport) {
 	fmt.Println("\n=== Per student results ===")
 	for _, report := range allReports {
@@ -806,7 +942,8 @@ func printConsoleSummary(allReports []studentReport, summary summaryReport) {
 
 	fmt.Println("\n=== Global summary by exercise ===")
 	for _, row := range summary.Rows {
-		fmt.Printf("Exercise %d -> total: %d, passed: %d, failed: %d\n", row.Exercise, row.Total, row.Passed, row.Failed)
+		fmt.Printf("Exercise %d -> students: %d  all pass: %d  partial: %d  all fail: %d  compile fail: %d  not submitted: %d\n",
+			row.Exercise, row.Total, row.AllPass, row.Partial, row.AllFail, row.CompileFail, row.NotSubmitted)
 	}
 	fmt.Printf("summary report: %s\n", filepath.Join(reportRootFolder, summarySubfolder, "index.html"))
 }
@@ -844,23 +981,36 @@ var studentReportTemplate = `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Test Report - {{.StudentName}}</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light');</script>
   <style>
-    body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 24px; color: #1a1a1a; background: #f7f7f9; }
+    :root{--bg:#f7f7f9;--surface:#fff;--border:#ddd;--text:#1a1a1a;--muted:#555;--th:#f2f2f4;--row-border:#ececec;--metric:#fafafa;--metric-border:#e6e6e6;--pre:#f5f5f5;--link:#1a6fb5;}
+    [data-theme=dark]{--bg:#18181b;--surface:#27272a;--border:#3f3f46;--text:#e4e4e7;--muted:#a1a1aa;--th:#333;--row-border:#3f3f46;--metric:#333;--metric-border:#52525b;--pre:#1e1e21;--link:#60a5fa;}
+    body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 24px; color: var(--text); background: var(--bg); }
     h1, h2 { margin: 0 0 12px; }
-    .card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    a { color: var(--link); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
     .metrics { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 8px; }
-    .metric { background: #fafafa; border: 1px solid #e6e6e6; border-radius: 8px; padding: 8px 10px; }
+    .metric { background: var(--metric); border: 1px solid var(--metric-border); border-radius: 8px; padding: 8px 10px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 12px; }
-    th, td { border-bottom: 1px solid #ececec; padding: 8px; text-align: left; vertical-align: top; }
-    th { background: #f2f2f4; }
+    th, td { border-bottom: 1px solid var(--row-border); padding: 8px; text-align: left; vertical-align: top; }
+    th { background: var(--th); }
     .ok { color: #0f7a34; font-weight: 700; }
     .fail { color: #b11f1f; font-weight: 700; }
-    pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; background: #f5f5f5; border-radius: 6px; padding: 8px; }
-    .ex-stats { font-size: 13px; color: #555; margin: 0 0 8px; }
+    pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; background: var(--pre); border-radius: 6px; padding: 8px; }
+    .ex-stats { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
     .chart-wrap { max-width: 560px; margin-top: 8px; }
+    #theme-toggle { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font-size: 14px; }
   </style>
 </head>
 <body>
+  <nav style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:16px; padding:8px 0; border-bottom:1px solid var(--border);">
+    <a href="{{.IndexPath}}">&#8592; All Students</a>
+    {{if .PrevPath}}<a href="{{.PrevPath}}">&#8592; {{.PrevName}}</a>{{end}}
+    <span style="flex:1"></span>
+    {{if .NextPath}}<a href="{{.NextPath}}">{{.NextName}} &#8594;</a>{{end}}
+    <a href="{{.SummaryPath}}">Summary &#8594;</a>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙</button>
+  </nav>
   <h1>Student Report: {{.StudentName}}</h1>
   <div class="card">
     <div><strong>Student folder:</strong> {{.StudentPath}}</div>
@@ -936,6 +1086,176 @@ var studentReportTemplate = `<!doctype html>
     {{end}}
   </div>
   {{end}}
+  <script>
+  function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.getElementById('theme-toggle').textContent=n==='dark'?'\u2600\ufe0f':'\ud83c\udf19';}
+  document.getElementById('theme-toggle').textContent=document.documentElement.getAttribute('data-theme')==='dark'?'\u2600\ufe0f':'\ud83c\udf19';
+  </script>
+</body>
+</html>`
+
+var indexReportTemplate = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Test Results</title>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light');</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f7f7f9;--surface:#fff;--border:#ddd;--text:#1a1a1a;--muted:#555;--th:#f2f2f4;--row-border:#ececec;--metric:#fafafa;--metric-border:#e6e6e6;--pre:#f5f5f5;--link:#1a6fb5;--sidebar:#ebebef;}
+[data-theme=dark]{--bg:#18181b;--surface:#27272a;--border:#3f3f46;--text:#e4e4e7;--muted:#a1a1aa;--th:#333;--row-border:#3f3f46;--metric:#333;--metric-border:#52525b;--pre:#1e1e21;--link:#60a5fa;--sidebar:#1f1f22;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{display:flex;font-family:"Helvetica Neue",Arial,sans-serif;color:var(--text);background:var(--bg);font-size:14px}
+a{color:var(--link);text-decoration:none}
+h1{font-size:1.3rem;margin-bottom:14px}
+h2{font-size:1.05rem;margin-bottom:8px}
+#sidebar{width:220px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow:hidden}
+#sidebar-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);font-weight:700;flex-shrink:0}
+#sidebar-nav{flex:1;overflow-y:auto;padding:6px}
+.nav-link{display:block;padding:5px 10px;border-radius:6px;color:var(--text);font-size:13px;margin-bottom:1px}
+.nav-link:hover,.nav-link.active{background:var(--th)}
+.nav-link.active{font-weight:600}
+.nav-sep{border:none;border-top:1px solid var(--border);margin:5px 2px}
+#main{flex:1;overflow-y:auto;padding:24px;min-width:0}
+.page{display:none}
+.page.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(100px,1fr));gap:8px;margin-top:10px}
+.metric{background:var(--metric);border:1px solid var(--metric-border);border-radius:8px;padding:7px 10px}
+table{width:100%;border-collapse:collapse;margin-bottom:10px}
+th,td{border-bottom:1px solid var(--row-border);padding:7px 8px;text-align:left;vertical-align:top}
+th{background:var(--th);font-weight:600}
+.ok{color:#0f7a34;font-weight:700}
+.fail{color:#b11f1f;font-weight:700}
+pre{white-space:pre-wrap;word-break:break-word;font-size:11px;background:var(--pre);border-radius:6px;padding:6px}
+.ex-stats{font-size:12px;color:var(--muted);margin-bottom:6px}
+.chart-wrap{max-width:520px;margin-top:6px}
+.allpass{color:#0f7a34;font-weight:700}
+.partial{color:#b07800;font-weight:700}
+.allfail{color:#b11f1f;font-weight:700}
+.compile{color:#7a1fb0;font-weight:700}
+.missing{color:#888;font-weight:700}
+.tc{text-align:center}
+#theme-toggle{background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--text);font-size:13px}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div id="sidebar-header">
+    <span>Test Results</span>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙</button>
+  </div>
+  <nav id="sidebar-nav">
+    <a class="nav-link" href="#summary" onclick="return nav('summary',this)">&#128202; Summary</a>
+    <hr class="nav-sep"/>
+    {{range .Students}}
+    <a class="nav-link" href="#{{sanitizeID .StudentName}}" onclick="return nav('{{sanitizeID .StudentName}}',this)">{{.StudentName}}</a>
+    {{end}}
+  </nav>
+</div>
+<div id="main">
+  <div id="summary" class="page">
+    <h1>Summary by Exercise</h1>
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th>Exercise</th>
+          <th class="tc">Students</th><th class="tc">All Pass</th><th class="tc">Partial</th>
+          <th class="tc">All Fail</th><th class="tc">Compile Fail</th><th class="tc">Not Submitted</th>
+        </tr></thead>
+        <tbody>
+        {{range .Summary.Rows}}
+        <tr>
+          <td style="font-weight:600">{{.Exercise}}</td>
+          <td class="tc">{{.Total}}</td>
+          <td class="tc allpass">{{.AllPass}}</td>
+          <td class="tc partial">{{.Partial}}</td>
+          <td class="tc allfail">{{.AllFail}}</td>
+          <td class="tc compile">{{.CompileFail}}</td>
+          <td class="tc missing">{{.NotSubmitted}}</td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{range .Students}}
+  {{$sid := sanitizeID .StudentName}}
+  <div id="{{$sid}}" class="page">
+    <h1>{{.StudentName}}</h1>
+    <div class="card">
+      <div><strong>Path:</strong> {{.StudentPath}}</div>
+      <div><strong>Started:</strong> {{.StartedAt}}</div>
+      <div><strong>Finished:</strong> {{.FinishedAt}}</div>
+      <div class="metrics">
+        <div class="metric"><strong>Total:</strong> {{.Total}}</div>
+        <div class="metric"><strong>Passed:</strong> {{.Passed}} ({{pct .Passed .Total}})</div>
+        <div class="metric"><strong>Failed:</strong> {{.Failed}} ({{pct .Failed .Total}})</div>
+        <div class="metric"><strong>Compile/Runtime/Diff:</strong> {{.CompileFails}}/{{.RuntimeFails}}/{{.DiffFails}}</div>
+      </div>
+    </div>
+    {{range .Groups}}
+    <div class="card">
+      <h2>Exercise {{.Exercise}}</h2>
+      <p class="ex-stats">Passed: <strong>{{.Passed}}</strong> &nbsp; Failed: <strong>{{.Failed}}</strong> &nbsp; Total: <strong>{{len .Results}}</strong></p>
+      <table>
+        <thead><tr>
+          <th>Case</th><th>Status</th><th>Failure Type</th><th>Input Size</th>
+          <th>Time</th><th>Diagnostics</th><th>Expected</th><th>Actual</th>
+        </tr></thead>
+        <tbody>
+        {{range .Results}}
+        <tr>
+          <td>{{.InputFile}}</td>
+          <td>{{if .Passed}}<span class="ok">PASS</span>{{else}}<span class="fail">FAIL</span>{{end}}</td>
+          <td>{{.FailureType}}</td>
+          <td>{{if gt .InputSize 0}}{{.InputSize}}{{end}}</td>
+          <td>{{fmtDuration .Duration}}</td>
+          <td>{{if .Message}}<pre>{{.Message}}</pre>{{end}}</td>
+          <td>{{if .Expected}}<pre>{{.Expected}}</pre>{{end}}</td>
+          <td>{{if .Actual}}<pre>{{.Actual}}</pre>{{end}}</td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+      {{if .HasChartData}}<div class="chart-wrap"><canvas id="chart-{{$sid}}-{{.Exercise}}"></canvas></div>{{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+<script>
+var _cc={
+{{range .Students}}{{$sid := sanitizeID .StudentName}}{{range .Groups}}{{if .HasChartData}}"chart-{{$sid}}-{{.Exercise}}":{{chartConfig .Results}},
+{{end}}{{end}}{{end}}};
+var _ci={};
+function _ic(el){el.querySelectorAll('canvas').forEach(function(c){if(!_ci[c.id]&&_cc[c.id]){_ci[c.id]=new Chart(c,_cc[c.id]);}});}
+function nav(id,el){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});
+  var pg=document.getElementById(id);
+  if(pg){pg.classList.add('active');_ic(pg);}
+  if(el)el.classList.add('active');
+  history.replaceState(null,'','#'+id);
+  return false;
+}
+function toggleTheme(){
+  var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',n);
+  localStorage.setItem('theme',n);
+  document.getElementById('theme-toggle').textContent=n==='dark'?'☀️':'🌙';
+}
+document.getElementById('theme-toggle').textContent=document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙';
+(function(){
+  var h=location.hash.slice(1)||'summary';
+  nav(h,document.querySelector('[href="#'+h+'"]'));
+}());
+window.addEventListener('popstate',function(){
+  var h=location.hash.slice(1)||'summary';
+  nav(h,document.querySelector('[href="#'+h+'"]'));
+});
+</script>
 </body>
 </html>`
 
@@ -945,16 +1265,32 @@ var summaryReportTemplate = `<!doctype html>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Global Exercise Summary</title>
+  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light');</script>
   <style>
-    body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 24px; color: #1a1a1a; background: #f7f7f9; }
+    :root{--bg:#f7f7f9;--surface:#fff;--border:#ddd;--text:#1a1a1a;--th:#f2f2f4;--row-border:#ececec;--link:#1a6fb5;}
+    [data-theme=dark]{--bg:#18181b;--surface:#27272a;--border:#3f3f46;--text:#e4e4e7;--th:#333;--row-border:#3f3f46;--link:#60a5fa;}
+    body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 24px; color: var(--text); background: var(--bg); }
     h1 { margin: 0 0 12px; }
-    .card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
+    a { color: var(--link); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { border-bottom: 1px solid #ececec; padding: 8px; text-align: left; }
-    th { background: #f2f2f4; }
+    th, td { border-bottom: 1px solid var(--row-border); padding: 8px; text-align: center; }
+    th { background: var(--th); }
+    td:first-child { text-align: left; font-weight: 600; }
+    .allpass { color: #0f7a34; font-weight: 700; }
+    .partial  { color: #b07800; font-weight: 700; }
+    .allfail  { color: #b11f1f; font-weight: 700; }
+    .compile  { color: #7a1fb0; font-weight: 700; }
+    .missing  { color: #888;    font-weight: 700; }
+    #theme-toggle { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font-size: 14px; }
   </style>
 </head>
 <body>
+  <nav style="display:flex; align-items:center; gap:16px; margin-bottom:16px; padding:8px 0; border-bottom:1px solid var(--border);">
+    <a href="../index.html">&#8592; All Students</a>
+    <span style="flex:1"></span>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙</button>
+  </nav>
   <h1>Summary by Exercise</h1>
   <div class="card">
     <div><strong>Generated:</strong> {{.GeneratedAt}}</div>
@@ -962,13 +1298,12 @@ var summaryReportTemplate = `<!doctype html>
       <thead>
         <tr>
           <th>Exercise</th>
-          <th>Total</th>
-          <th>Passed</th>
-          <th>Failed</th>
-          <th>Pass Rate</th>
-          <th>Compile Fails</th>
-          <th>Runtime Fails</th>
-          <th>Diff Fails</th>
+          <th>Students</th>
+          <th>All Pass</th>
+          <th>Partial</th>
+          <th>All Fail</th>
+          <th>Compile Fail</th>
+          <th>Not Submitted</th>
         </tr>
       </thead>
       <tbody>
@@ -976,16 +1311,19 @@ var summaryReportTemplate = `<!doctype html>
         <tr>
           <td>{{.Exercise}}</td>
           <td>{{.Total}}</td>
-          <td>{{.Passed}}</td>
-          <td>{{.Failed}}</td>
-          <td>{{pct .Passed .Total}}</td>
-          <td>{{.CompileFails}}</td>
-          <td>{{.RuntimeFails}}</td>
-          <td>{{.DiffFails}}</td>
+          <td class="allpass">{{.AllPass}}</td>
+          <td class="partial">{{.Partial}}</td>
+          <td class="allfail">{{.AllFail}}</td>
+          <td class="compile">{{.CompileFail}}</td>
+          <td class="missing">{{.NotSubmitted}}</td>
         </tr>
       {{end}}
       </tbody>
     </table>
   </div>
+  <script>
+  function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.getElementById('theme-toggle').textContent=n==='dark'?'\u2600\ufe0f':'\ud83c\udf19';}
+  document.getElementById('theme-toggle').textContent=document.documentElement.getAttribute('data-theme')==='dark'?'\u2600\ufe0f':'\ud83c\udf19';
+  </script>
 </body>
 </html>`
