@@ -23,7 +23,6 @@ const (
 	reportRootFolder      = "test-results"
 	summarySubfolder      = "summary"
 	maxDiagnosticTextSize = 8000
-	defaultTimeout        = 10 * time.Second
 )
 
 type failureType string
@@ -151,7 +150,7 @@ func main() {
 		cli.IntFlag{
 			Name:  "timeout, T",
 			Usage: "Per-test execution timeout in seconds",
-			Value: 10,
+			Value: 30,
 		},
 	}
 
