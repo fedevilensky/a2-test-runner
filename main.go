@@ -421,6 +421,10 @@ func runForStudent(studentFolder string, testsFolder string, exerciseFolders map
 		Results:     make([]testCaseResult, 0),
 	}
 
+	if err := removeClassFiles(studentFolder); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not remove .class files in %q: %v\n", studentFolder, err)
+	}
+
 	for _, exercise := range selected {
 		testFolder := exerciseFolders[exercise]
 		testCases, err := collectTestCases(testFolder)
@@ -954,6 +958,18 @@ func fileExists(path string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func removeClassFiles(root string) error {
+	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil // skip unreadable entries
+		}
+		if !d.IsDir() && strings.HasSuffix(d.Name(), ".class") {
+			_ = os.Remove(path)
+		}
+		return nil
+	})
 }
 
 func sanitizeName(name string) string {
