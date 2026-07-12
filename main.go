@@ -1242,6 +1242,7 @@ function nav(id,el){
   if(pg){pg.classList.add('active');_ic(pg);}
   if(el)el.classList.add('active');
   history.replaceState(null,'','#'+id);
+  document.getElementById('main').scrollTop=0;
   return false;
 }
 function toggleTheme(){
