@@ -594,6 +594,8 @@ func prepareExecutable(studentFolder string, exercise int) (executable, error, s
 	}
 
 	cmd := exec.Command("javac", "-d", tmpDir, javaFile)
+	cmd.Dir = studentFolder
+
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
