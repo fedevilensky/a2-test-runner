@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Global Exercise Summary</title>
+  <script>(function(){
+  var saved, theme = 'dark';
+  try { saved = localStorage.getItem('theme'); } catch (e) {}
+  if (saved === 'light' || saved === 'dark') theme = saved;
+  else {
+    try { if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) theme = 'light'; } catch (e) {}
+  }
+  document.documentElement.setAttribute('data-theme', theme);
+})();</script>
+  <style>
+    :root{--bg:#f7f7f9;--surface:#fff;--border:#ddd;--text:#1a1a1a;--th:#f2f2f4;--row-border:#ececec;--link:#1a6fb5;}
+    [data-theme=dark]{--bg:#18181b;--surface:#27272a;--border:#3f3f46;--text:#e4e4e7;--th:#333;--row-border:#3f3f46;--link:#60a5fa;}
+    body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 24px; color: var(--text); background: var(--bg); }
+    h1 { margin: 0 0 12px; }
+    a { color: var(--link); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--row-border); padding: 8px; text-align: center; }
+    th { background: var(--th); }
+    td:first-child { text-align: left; font-weight: 600; }
+    .allpass { color: #0f7a34; font-weight: 700; }
+    .partial  { color: #b07800; font-weight: 700; }
+    .allfail  { color: #b11f1f; font-weight: 700; }
+    .compile  { color: #7a1fb0; font-weight: 700; }
+    .missing  { color: #888;    font-weight: 700; }
+    #theme-toggle { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <nav style="display:flex; align-items:center; gap:16px; margin-bottom:16px; padding:8px 0; border-bottom:1px solid var(--border);">
+    <a href="../index.html">&#8592; All Students</a>
+    <span style="flex:1"></span>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙</button>
+  </nav>
+  <h1>Summary by Exercise</h1>
+  <div class="card">
+    <div><strong>Generated:</strong> 2026-11-10 09:59:45.794886457 -0300 -03 m=&#43;14.844084211</div>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Exercise</th>
+          <th>Students</th>
+          <th>All Pass</th>
+          <th>Partial</th>
+          <th>All Fail</th>
+          <th>Compile Fail</th>
+          <th>Not Submitted</th>
+        </tr>
+      </thead>
+      <tbody>
+      
+        <tr>
+          <td>1</td>
+          <td>1</td>
+          <td class="allpass">0</td>
+          <td class="partial">1</td>
+          <td class="allfail">0</td>
+          <td class="compile">0</td>
+          <td class="missing">0</td>
+        </tr>
+      
+        <tr>
+          <td>2</td>
+          <td>1</td>
+          <td class="allpass">1</td>
+          <td class="partial">0</td>
+          <td class="allfail">0</td>
+          <td class="compile">0</td>
+          <td class="missing">0</td>
+        </tr>
+      
+        <tr>
+          <td>3</td>
+          <td>1</td>
+          <td class="allpass">1</td>
+          <td class="partial">0</td>
+          <td class="allfail">0</td>
+          <td class="compile">0</td>
+          <td class="missing">0</td>
+        </tr>
+      
+        <tr>
+          <td>4</td>
+          <td>1</td>
+          <td class="allpass">1</td>
+          <td class="partial">0</td>
+          <td class="allfail">0</td>
+          <td class="compile">0</td>
+          <td class="missing">0</td>
+        </tr>
+      
+        <tr>
+          <td>5</td>
+          <td>1</td>
+          <td class="allpass">1</td>
+          <td class="partial">0</td>
+          <td class="allfail">0</td>
+          <td class="compile">0</td>
+          <td class="missing">0</td>
+        </tr>
+      
+      </tbody>
+    </table>
+  </div>
+  <script>
+  function toggleExercise(button){var expanded=button.getAttribute("aria-expanded")==="true";button.setAttribute("aria-expanded",String(!expanded));button.closest(".exercise-card").querySelector(".table-scroll").hidden=expanded;}
+  function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);try{localStorage.setItem('theme',n);}catch(e){}document.getElementById('theme-toggle').textContent=n==='dark'?'\u2600\ufe0f':'\ud83c\udf19';}
+  document.getElementById('theme-toggle').textContent=document.documentElement.getAttribute('data-theme')==='dark'?'\u2600\ufe0f':'\ud83c\udf19';
+  </script>
+</body>
+</html>

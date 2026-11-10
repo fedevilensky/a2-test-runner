@@ -1,0 +1,1501 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Test Report - E-279323-2</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light');</script>
+  <style>
+    :root{--bg:#f7f7f9;--surface:#fff;--border:#ddd;--text:#1a1a1a;--muted:#555;--th:#f2f2f4;--row-border:#ececec;--metric:#fafafa;--metric-border:#e6e6e6;--pre:#f5f5f5;--link:#1a6fb5;}
+    [data-theme=dark]{--bg:#18181b;--surface:#27272a;--border:#3f3f46;--text:#e4e4e7;--muted:#a1a1aa;--th:#333;--row-border:#3f3f46;--metric:#333;--metric-border:#52525b;--pre:#1e1e21;--link:#60a5fa;}
+    body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 24px; color: var(--text); background: var(--bg); }
+    h1, h2 { margin: 0 0 12px; }
+    a { color: var(--link); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .exercise-card { padding: 0; }
+    .exercise-header { position: sticky; top: 0; z-index: 1; background: var(--surface); border-radius: 10px; padding: 16px; cursor: pointer; }
+    .exercise-toggle { display: block; background: none; border: 0; padding: 0; color: inherit; font: inherit; font-size: 1.5em; font-weight: 700; text-align: left; cursor: pointer; }
+    .exercise-toggle::before { content: "▾ "; }
+    .exercise-toggle[aria-expanded="false"]::before { content: "▸ "; }
+    .exercise-header .ex-stats { margin: 8px 0 0; }
+    .exercise-content { padding: 0 16px 16px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 8px; }
+    .metric { background: var(--metric); border: 1px solid var(--metric-border); border-radius: 8px; padding: 8px 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 12px; }
+    th, td { border-bottom: 1px solid var(--row-border); padding: 8px; text-align: left; vertical-align: top; }
+    th { background: var(--th); }
+    .ok { color: #0f7a34; font-weight: 700; }
+    .fail { color: #b11f1f; font-weight: 700; }
+    pre { margin: 0; white-space: pre; font-size: 12px; line-height: 1.4; max-height: calc(10 * 1.4em + 16px); overflow: auto; background: var(--pre); border-radius: 6px; padding: 8px; }
+    .table-scroll { overflow-x: auto; }
+    .table-scroll table { table-layout: fixed; min-width: 960px; }
+    .table-scroll td { overflow-wrap: anywhere; }
+    @media (max-width: 700px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } body { margin: 12px; } }
+    .ex-stats { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+    .chart-wrap { max-width: 560px; margin-top: 8px; }
+    #theme-toggle { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <nav style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:16px; padding:8px 0; border-bottom:1px solid var(--border);">
+    <a href="../index.html">&#8592; All Students</a>
+    
+    <span style="flex:1"></span>
+    
+    <a href="../summary/index.html">Summary &#8594;</a>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙</button>
+  </nav>
+  <h1>Student Report: E-279323-2</h1>
+  <div class="card">
+    <div><strong>Student folder:</strong> /home/fede/Desktop/obli-a2/E-279323-2</div>
+    <div><strong>Started:</strong> 2026-11-10 09:51:53.869240878 -0300 -03 m=&#43;0.000378256</div>
+    <div><strong>Finished:</strong> 2026-11-10 09:52:26.6530172 -0300 -03 m=&#43;32.784154588</div>
+    <div class="metrics" style="margin-top:10px;">
+      <div class="metric"><strong>Total:</strong> 95</div>
+      <div class="metric"><strong>Passed:</strong> 86 (90.5%)</div>
+      <div class="metric"><strong>Failed:</strong> 9 (9.5%)</div>
+      <div class="metric"><strong>Compile / Runtime / Diff:</strong> 0 / 9 / 0</div>
+    </div>
+  </div>
+
+  
+  <section class="card exercise-card">
+    <div class="exercise-header"><button type="button" class="exercise-toggle" aria-expanded="true" onclick="toggleExercise(this)">Exercise 1</button>
+    <p class="ex-stats">Passed: <strong>9</strong> &nbsp; Failed: <strong>9</strong> &nbsp; Total: <strong>18</strong></p></div>
+    <div class="exercise-content">
+    <div class="table-scroll"><table>
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Status</th>
+          <th>Failure Type</th>
+          <th>Input Size</th>
+          <th>Time</th>
+          <th>Diagnostics</th>
+          <th>Expected</th>
+          <th>Actual</th>
+          <th>Diff</th>
+        </tr>
+      </thead>
+      <tbody>
+      
+        <tr>
+          <td>10.in.txt</td>
+          <td><span class="fail">FAIL</span></td>
+          <td>runtime_error</td>
+          <td>10</td>
+          <td>0.051s</td>
+          <td><pre tabindex="0">Exception in thread &#34;main&#34; java.util.InputMismatchException: For input string: &#34;191437234728&#34;
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2303)
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2251)
+	at Ejercicio1.main(Ejercicio1.java:20)</pre></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>100.in.txt</td>
+          <td><span class="fail">FAIL</span></td>
+          <td>runtime_error</td>
+          <td>100</td>
+          <td>0.043s</td>
+          <td><pre tabindex="0">Exception in thread &#34;main&#34; java.util.InputMismatchException: For input string: &#34;469616214080&#34;
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2303)
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2251)
+	at Ejercicio1.main(Ejercicio1.java:38)</pre></td>
+          <td></td>
+          <td><pre tabindex="0">no</pre></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>1000.in.txt</td>
+          <td><span class="fail">FAIL</span></td>
+          <td>runtime_error</td>
+          <td>1000</td>
+          <td>0.042s</td>
+          <td><pre tabindex="0">Exception in thread &#34;main&#34; java.util.InputMismatchException: For input string: &#34;762555652419&#34;
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2303)
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2251)
+	at Ejercicio1.main(Ejercicio1.java:28)</pre></td>
+          <td></td>
+          <td><pre tabindex="0">no</pre></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>10000.in.txt</td>
+          <td><span class="fail">FAIL</span></td>
+          <td>runtime_error</td>
+          <td>10000</td>
+          <td>0.044s</td>
+          <td><pre tabindex="0">Exception in thread &#34;main&#34; java.util.InputMismatchException: For input string: &#34;164034243181&#34;
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2303)
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2251)
+	at Ejercicio1.main(Ejercicio1.java:38)</pre></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>100000.in.txt</td>
+          <td><span class="fail">FAIL</span></td>
+          <td>runtime_error</td>
+          <td>100000</td>
+          <td>0.043s</td>
+          <td><pre tabindex="0">Exception in thread &#34;main&#34; java.util.InputMismatchException: For input string: &#34;496381193695&#34;
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2303)
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2251)
+	at Ejercicio1.main(Ejercicio1.java:20)</pre></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>200000.in.txt</td>
+          <td><span class="fail">FAIL</span></td>
+          <td>runtime_error</td>
+          <td>200000</td>
+          <td>0.044s</td>
+          <td><pre tabindex="0">Exception in thread &#34;main&#34; java.util.InputMismatchException: For input string: &#34;958373498152&#34;
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2303)
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2251)
+	at Ejercicio1.main(Ejercicio1.java:20)</pre></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>duplicados.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.463s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo1.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>1</td>
+          <td>0.044s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo2.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>2</td>
+          <td>0.045s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo3.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>3</td>
+          <td>0.045s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo4.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>4</td>
+          <td>0.043s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>minimo.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.042s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>monotono_creciente.in.txt</td>
+          <td><span class="fail">FAIL</span></td>
+          <td>runtime_error</td>
+          <td></td>
+          <td>0.052s</td>
+          <td><pre tabindex="0">Exception in thread &#34;main&#34; java.util.InputMismatchException: For input string: &#34;2150000001&#34;
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2303)
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2251)
+	at Ejercicio1.main(Ejercicio1.java:20)</pre></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>monotono_decreciente.in.txt</td>
+          <td><span class="fail">FAIL</span></td>
+          <td>runtime_error</td>
+          <td></td>
+          <td>0.044s</td>
+          <td><pre tabindex="0">Exception in thread &#34;main&#34; java.util.InputMismatchException: For input string: &#34;949995000001&#34;
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2303)
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2251)
+	at Ejercicio1.main(Ejercicio1.java:20)</pre></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>monotono_pinturas.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.306s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>pocas_letras.in.txt</td>
+          <td><span class="fail">FAIL</span></td>
+          <td>runtime_error</td>
+          <td></td>
+          <td>0.041s</td>
+          <td><pre tabindex="0">Exception in thread &#34;main&#34; java.util.InputMismatchException: For input string: &#34;595539569572&#34;
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2303)
+	at java.base/java.util.Scanner.nextInt(Scanner.java:2251)
+	at Ejercicio1.main(Ejercicio1.java:20)</pre></td>
+          <td></td>
+          <td><pre tabindex="0">no</pre></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>rangos_angostos.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.689s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>rangos_vacios.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.384s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+      </tbody>
+    </table></div>
+    
+    <div class="chart-wrap">
+      <canvas id="chart-ex-1"></canvas>
+    </div>
+    <script>
+    new Chart(document.getElementById('chart-ex-1'), {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Input Size vs Time (ms)',
+          data: [{"x":10,"y":51,"label":"10"},{"x":100,"y":43,"label":"100"},{"x":1000,"y":42,"label":"1000"},{"x":10000,"y":44,"label":"10000"},{"x":100000,"y":43,"label":"100000"},{"x":200000,"y":43,"label":"200000"},{"x":1,"y":43,"label":"ejemplo1"},{"x":2,"y":44,"label":"ejemplo2"},{"x":3,"y":44,"label":"ejemplo3"},{"x":4,"y":43,"label":"ejemplo4"}],
+          backgroundColor: 'rgba(59,130,246,0.7)',
+          pointRadius: 5
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Input Size vs Time' }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Input Size' }, type: 'linear' },
+          y: { title: { display: true, text: 'Time (ms)' }, beginAtZero: true }
+        }
+      }
+    });
+    </script>
+    
+    </div>
+  </section>
+  
+  <section class="card exercise-card">
+    <div class="exercise-header"><button type="button" class="exercise-toggle" aria-expanded="true" onclick="toggleExercise(this)">Exercise 2</button>
+    <p class="ex-stats">Passed: <strong>19</strong> &nbsp; Failed: <strong>0</strong> &nbsp; Total: <strong>19</strong></p></div>
+    <div class="exercise-content">
+    <div class="table-scroll"><table>
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Status</th>
+          <th>Failure Type</th>
+          <th>Input Size</th>
+          <th>Time</th>
+          <th>Diagnostics</th>
+          <th>Expected</th>
+          <th>Actual</th>
+          <th>Diff</th>
+        </tr>
+      </thead>
+      <tbody>
+      
+        <tr>
+          <td>10.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>10</td>
+          <td>0.047s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>100.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>100</td>
+          <td>0.053s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>1000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>1000</td>
+          <td>0.070s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>10000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>10000</td>
+          <td>0.134s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>100000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>100000</td>
+          <td>0.479s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>cajon_gigante.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.452s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>cajon_gigante_repetido.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.450s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>consultas_ausentes.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.448s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo1.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>1</td>
+          <td>0.046s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo2.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>2</td>
+          <td>0.046s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo3.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>3</td>
+          <td>0.046s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo4.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>4</td>
+          <td>0.047s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>maximo.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.524s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>minimo.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.047s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>mismo_largo.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.480s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>pocas_letras.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.403s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>prefijo_comun.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.529s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>suma_igual.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.576s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>todas_distintas.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.499s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+      </tbody>
+    </table></div>
+    
+    <div class="chart-wrap">
+      <canvas id="chart-ex-2"></canvas>
+    </div>
+    <script>
+    new Chart(document.getElementById('chart-ex-2'), {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Input Size vs Time (ms)',
+          data: [{"x":10,"y":47,"label":"10"},{"x":100,"y":53,"label":"100"},{"x":1000,"y":69,"label":"1000"},{"x":10000,"y":133,"label":"10000"},{"x":100000,"y":478,"label":"100000"},{"x":1,"y":46,"label":"ejemplo1"},{"x":2,"y":45,"label":"ejemplo2"},{"x":3,"y":46,"label":"ejemplo3"},{"x":4,"y":46,"label":"ejemplo4"}],
+          backgroundColor: 'rgba(59,130,246,0.7)',
+          pointRadius: 5
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Input Size vs Time' }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Input Size' }, type: 'linear' },
+          y: { title: { display: true, text: 'Time (ms)' }, beginAtZero: true }
+        }
+      }
+    });
+    </script>
+    
+    </div>
+  </section>
+  
+  <section class="card exercise-card">
+    <div class="exercise-header"><button type="button" class="exercise-toggle" aria-expanded="true" onclick="toggleExercise(this)">Exercise 3</button>
+    <p class="ex-stats">Passed: <strong>18</strong> &nbsp; Failed: <strong>0</strong> &nbsp; Total: <strong>18</strong></p></div>
+    <div class="exercise-content">
+    <div class="table-scroll"><table>
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Status</th>
+          <th>Failure Type</th>
+          <th>Input Size</th>
+          <th>Time</th>
+          <th>Diagnostics</th>
+          <th>Expected</th>
+          <th>Actual</th>
+          <th>Diff</th>
+        </tr>
+      </thead>
+      <tbody>
+      
+        <tr>
+          <td>10.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>10</td>
+          <td>0.045s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>100.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>100</td>
+          <td>0.048s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>1000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>1000</td>
+          <td>0.056s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>10000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>10000</td>
+          <td>0.087s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>100000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>100000</td>
+          <td>0.210s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>1000000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>1000000</td>
+          <td>1.166s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>crecientes.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.042s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>crecientes_grande.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.196s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>decrecientes.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.199s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>dos_valores.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.187s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo1.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>1</td>
+          <td>0.042s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo2.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>2</td>
+          <td>0.042s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo3.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>3</td>
+          <td>0.040s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo4.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>4</td>
+          <td>0.042s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo5.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>5</td>
+          <td>0.041s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>maximo.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>2.635s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>minimo.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.060s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>todos_iguales.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.183s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+      </tbody>
+    </table></div>
+    
+    <div class="chart-wrap">
+      <canvas id="chart-ex-3"></canvas>
+    </div>
+    <script>
+    new Chart(document.getElementById('chart-ex-3'), {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Input Size vs Time (ms)',
+          data: [{"x":10,"y":44,"label":"10"},{"x":100,"y":47,"label":"100"},{"x":1000,"y":55,"label":"1000"},{"x":10000,"y":86,"label":"10000"},{"x":100000,"y":209,"label":"100000"},{"x":1000000,"y":1165,"label":"1000000"},{"x":1,"y":42,"label":"ejemplo1"},{"x":2,"y":42,"label":"ejemplo2"},{"x":3,"y":39,"label":"ejemplo3"},{"x":4,"y":41,"label":"ejemplo4"},{"x":5,"y":41,"label":"ejemplo5"}],
+          backgroundColor: 'rgba(59,130,246,0.7)',
+          pointRadius: 5
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Input Size vs Time' }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Input Size' }, type: 'linear' },
+          y: { title: { display: true, text: 'Time (ms)' }, beginAtZero: true }
+        }
+      }
+    });
+    </script>
+    
+    </div>
+  </section>
+  
+  <section class="card exercise-card">
+    <div class="exercise-header"><button type="button" class="exercise-toggle" aria-expanded="true" onclick="toggleExercise(this)">Exercise 4</button>
+    <p class="ex-stats">Passed: <strong>18</strong> &nbsp; Failed: <strong>0</strong> &nbsp; Total: <strong>18</strong></p></div>
+    <div class="exercise-content">
+    <div class="table-scroll"><table>
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Status</th>
+          <th>Failure Type</th>
+          <th>Input Size</th>
+          <th>Time</th>
+          <th>Diagnostics</th>
+          <th>Expected</th>
+          <th>Actual</th>
+          <th>Diff</th>
+        </tr>
+      </thead>
+      <tbody>
+      
+        <tr>
+          <td>10.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>10</td>
+          <td>0.045s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>100.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>100</td>
+          <td>0.052s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>1000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>1000</td>
+          <td>0.071s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>10000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>10000</td>
+          <td>0.148s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>100000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>100000</td>
+          <td>0.485s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>cadena.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.339s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ciclo_minimo.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.044s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ciclo_parcial.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.378s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo1.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>1</td>
+          <td>0.045s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo2.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>2</td>
+          <td>0.044s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo3.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>3</td>
+          <td>0.044s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo4.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>4</td>
+          <td>0.044s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo5.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>5</td>
+          <td>0.044s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>fifo_distinto.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.494s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>maximo.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>2.007s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>minimo.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.045s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>minimo_lineal.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.287s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>prioridades_iguales.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.489s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+      </tbody>
+    </table></div>
+    
+    <div class="chart-wrap">
+      <canvas id="chart-ex-4"></canvas>
+    </div>
+    <script>
+    new Chart(document.getElementById('chart-ex-4'), {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Input Size vs Time (ms)',
+          data: [{"x":10,"y":44,"label":"10"},{"x":100,"y":51,"label":"100"},{"x":1000,"y":71,"label":"1000"},{"x":10000,"y":147,"label":"10000"},{"x":100000,"y":485,"label":"100000"},{"x":1,"y":44,"label":"ejemplo1"},{"x":2,"y":43,"label":"ejemplo2"},{"x":3,"y":43,"label":"ejemplo3"},{"x":4,"y":44,"label":"ejemplo4"},{"x":5,"y":43,"label":"ejemplo5"}],
+          backgroundColor: 'rgba(59,130,246,0.7)',
+          pointRadius: 5
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Input Size vs Time' }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Input Size' }, type: 'linear' },
+          y: { title: { display: true, text: 'Time (ms)' }, beginAtZero: true }
+        }
+      }
+    });
+    </script>
+    
+    </div>
+  </section>
+  
+  <section class="card exercise-card">
+    <div class="exercise-header"><button type="button" class="exercise-toggle" aria-expanded="true" onclick="toggleExercise(this)">Exercise 5</button>
+    <p class="ex-stats">Passed: <strong>22</strong> &nbsp; Failed: <strong>0</strong> &nbsp; Total: <strong>22</strong></p></div>
+    <div class="exercise-content">
+    <div class="table-scroll"><table>
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Status</th>
+          <th>Failure Type</th>
+          <th>Input Size</th>
+          <th>Time</th>
+          <th>Diagnostics</th>
+          <th>Expected</th>
+          <th>Actual</th>
+          <th>Diff</th>
+        </tr>
+      </thead>
+      <tbody>
+      
+        <tr>
+          <td>10.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>10</td>
+          <td>0.046s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>100.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>100</td>
+          <td>0.056s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>1000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>1000</td>
+          <td>0.093s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>10000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>10000</td>
+          <td>0.264s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>100000.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>100000</td>
+          <td>1.525s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>arbol.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.414s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ciclos_baratos.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>1.081s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>desconexo_grande.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.808s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>dos_componentes.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.802s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>dos_refugios.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.043s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>dsu_cadena.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.383s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>dsu_cadena_inverso.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.375s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo1.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>1</td>
+          <td>0.048s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo2.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>2</td>
+          <td>0.048s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo3.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>3</td>
+          <td>0.044s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo4.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>4</td>
+          <td>0.045s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>ejemplo5.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td>5</td>
+          <td>0.048s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>maximo.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>3.493s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>paralelas.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>1.436s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>sin_senderos.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.043s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>todos_iguales.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.911s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td>un_refugio.in.txt</td>
+          <td><span class="ok">PASS</span></td>
+          <td></td>
+          <td></td>
+          <td>0.052s</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      
+      </tbody>
+    </table></div>
+    
+    <div class="chart-wrap">
+      <canvas id="chart-ex-5"></canvas>
+    </div>
+    <script>
+    new Chart(document.getElementById('chart-ex-5'), {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Input Size vs Time (ms)',
+          data: [{"x":10,"y":45,"label":"10"},{"x":100,"y":55,"label":"100"},{"x":1000,"y":93,"label":"1000"},{"x":10000,"y":264,"label":"10000"},{"x":100000,"y":1524,"label":"100000"},{"x":1,"y":48,"label":"ejemplo1"},{"x":2,"y":47,"label":"ejemplo2"},{"x":3,"y":44,"label":"ejemplo3"},{"x":4,"y":45,"label":"ejemplo4"},{"x":5,"y":47,"label":"ejemplo5"}],
+          backgroundColor: 'rgba(59,130,246,0.7)',
+          pointRadius: 5
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Input Size vs Time' }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Input Size' }, type: 'linear' },
+          y: { title: { display: true, text: 'Time (ms)' }, beginAtZero: true }
+        }
+      }
+    });
+    </script>
+    
+    </div>
+  </section>
+  
+  <script>
+  function toggleExercise(button){var expanded=button.getAttribute("aria-expanded")==="true";button.setAttribute("aria-expanded",String(!expanded));button.closest(".exercise-card").querySelector(".table-scroll").hidden=expanded;}
+  function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.getElementById('theme-toggle').textContent=n==='dark'?'\u2600\ufe0f':'\ud83c\udf19';}
+  document.getElementById('theme-toggle').textContent=document.documentElement.getAttribute('data-theme')==='dark'?'\u2600\ufe0f':'\ud83c\udf19';
+  </script>
+</body>
+</html>

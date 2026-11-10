@@ -20,9 +20,8 @@ import (
 )
 
 const (
-	reportRootFolder      = "test-results"
-	summarySubfolder      = "summary"
-	maxDiagnosticTextSize = 8000
+	reportRootFolder = "test-results"
+	summarySubfolder = "summary"
 )
 
 type failureType string
@@ -53,16 +52,19 @@ type testCase struct {
 }
 
 type testCaseResult struct {
-	Exercise    int
-	CaseName    string
-	InputFile   string
-	InputSize   int
-	Duration    time.Duration
-	Passed      bool
-	FailureType failureType
-	Message     string
-	Expected    string
-	Actual      string
+	Exercise      int
+	CaseName      string
+	InputFile     string
+	InputSize     int
+	Duration      time.Duration
+	Passed        bool
+	FailureType   failureType
+	Message       string
+	Expected      string
+	Actual        string
+	ExpectedLines []outputLine
+	ActualLines   []outputLine
+	HasDiffLines  bool
 }
 
 type studentReport struct {
@@ -667,14 +669,42 @@ func executeTestCase(execInfo executable, exercise int, tc testCase, timeout tim
 		result.Passed = false
 		result.FailureType = failureDiff
 		result.Message = "output differs from expected"
-		result.Expected = trimDiagnostic(expected)
-		result.Actual = trimDiagnostic(actual)
+		result.Expected = expected
+		result.Actual = actual
+		result.ExpectedLines, result.ActualLines, result.HasDiffLines = diffOutputLines(expected, actual, unifiedDiff(expected, actual))
 		return result
 	}
 
 	result.Passed = true
 	result.FailureType = failureNone
 	return result
+}
+
+// unifiedDiff uses the system diff utility when available. Expected and actual
+// output remain in the report even when the utility cannot be run.
+func unifiedDiff(expected, actual string) string {
+	dir, err := os.MkdirTemp("", "a2-test-runner-diff-*")
+	if err != nil {
+		return ""
+	}
+	defer os.RemoveAll(dir)
+	if err := os.WriteFile(filepath.Join(dir, "expected"), []byte(expected), 0o600); err != nil {
+		return ""
+	}
+	if err := os.WriteFile(filepath.Join(dir, "actual"), []byte(actual), 0o600); err != nil {
+		return ""
+	}
+	cmd := exec.Command("diff", "-u", "expected", "actual")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	// diff exits with status 1 when differences are found.
+	if err != nil {
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+			return ""
+		}
+	}
+	return string(out)
 }
 
 func outputsEqual(expected string, actual string) bool {
@@ -971,11 +1001,7 @@ func sanitizeName(name string) string {
 }
 
 func trimDiagnostic(s string) string {
-	s = strings.TrimSpace(s)
-	if len(s) <= maxDiagnosticTextSize {
-		return s
-	}
-	return s[:maxDiagnosticTextSize] + "\n... (truncated)"
+	return strings.TrimSpace(s)
 }
 
 var studentReportTemplate = `<!doctype html>
@@ -985,7 +1011,15 @@ var studentReportTemplate = `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Test Report - {{.StudentName}}</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light');</script>
+  <script>(function(){
+  var saved, theme = 'dark';
+  try { saved = localStorage.getItem('theme'); } catch (e) {}
+  if (saved === 'light' || saved === 'dark') theme = saved;
+  else {
+    try { if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) theme = 'light'; } catch (e) {}
+  }
+  document.documentElement.setAttribute('data-theme', theme);
+})();</script>
   <style>
     :root{--bg:#f7f7f9;--surface:#fff;--border:#ddd;--text:#1a1a1a;--muted:#555;--th:#f2f2f4;--row-border:#ececec;--metric:#fafafa;--metric-border:#e6e6e6;--pre:#f5f5f5;--link:#1a6fb5;}
     [data-theme=dark]{--bg:#18181b;--surface:#27272a;--border:#3f3f46;--text:#e4e4e7;--muted:#a1a1aa;--th:#333;--row-border:#3f3f46;--metric:#333;--metric-border:#52525b;--pre:#1e1e21;--link:#60a5fa;}
@@ -993,6 +1027,13 @@ var studentReportTemplate = `<!doctype html>
     h1, h2 { margin: 0 0 12px; }
     a { color: var(--link); }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .exercise-card { padding: 0; }
+    .exercise-header { position: sticky; top: 0; z-index: 1; background: var(--surface); border-radius: 10px; padding: 16px; cursor: pointer; }
+    .exercise-toggle { display: block; background: none; border: 0; padding: 0; color: inherit; font: inherit; font-size: 1.5em; font-weight: 700; text-align: left; cursor: pointer; }
+    .exercise-toggle::before { content: "▾ "; }
+    .exercise-toggle[aria-expanded="false"]::before { content: "▸ "; }
+    .exercise-header .ex-stats { margin: 8px 0 0; }
+    .exercise-content { padding: 0 16px 16px; }
     .metrics { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 8px; }
     .metric { background: var(--metric); border: 1px solid var(--metric-border); border-radius: 8px; padding: 8px 10px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 12px; }
@@ -1000,7 +1041,17 @@ var studentReportTemplate = `<!doctype html>
     th { background: var(--th); }
     .ok { color: #0f7a34; font-weight: 700; }
     .fail { color: #b11f1f; font-weight: 700; }
-    pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; background: var(--pre); border-radius: 6px; padding: 8px; }
+    pre { margin: 0; white-space: pre; font-size: 12px; line-height: 1.4; max-height: calc(10 * 1.4em + 16px); overflow: auto; background: var(--pre); border-radius: 6px; padding: 8px; }
+    .diff-line { display: block; min-height: 1.4em; }
+    .diff-removed { background: #f5dede; }
+    .diff-added { background: #dceee0; }
+    [data-theme=dark] .diff-removed { background: #593335; }
+    [data-theme=dark] .diff-added { background: #294b35; }
+    .empty-output { color: var(--muted); font-style: italic; }
+    .table-scroll { overflow-x: auto; }
+    .table-scroll table { table-layout: fixed; min-width: 960px; }
+    .table-scroll td { overflow-wrap: anywhere; }
+    @media (max-width: 700px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } body { margin: 12px; } }
     .ex-stats { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
     .chart-wrap { max-width: 560px; margin-top: 8px; }
     #theme-toggle { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font-size: 14px; }
@@ -1029,10 +1080,11 @@ var studentReportTemplate = `<!doctype html>
   </div>
 
   {{range .Groups}}
-  <div class="card">
-    <h2>Exercise {{.Exercise}}</h2>
-    <p class="ex-stats">Passed: <strong>{{.Passed}}</strong> &nbsp; Failed: <strong>{{.Failed}}</strong> &nbsp; Total: <strong>{{len .Results}}</strong></p>
-    <table>
+  <section class="card exercise-card">
+    <div class="exercise-header"><button type="button" class="exercise-toggle" aria-expanded="true" onclick="toggleExercise(this)">Exercise {{.Exercise}}</button>
+    <p class="ex-stats">Passed: <strong>{{.Passed}}</strong> &nbsp; Failed: <strong>{{.Failed}}</strong> &nbsp; Total: <strong>{{len .Results}}</strong></p></div>
+    <div class="exercise-content">
+    <div class="table-scroll"><table>
       <thead>
         <tr>
           <th>Case</th>
@@ -1053,13 +1105,13 @@ var studentReportTemplate = `<!doctype html>
           <td>{{.FailureType}}</td>
           <td>{{if gt .InputSize 0}}{{.InputSize}}{{end}}</td>
           <td>{{fmtDuration .Duration}}</td>
-          <td>{{if .Message}}<pre>{{.Message}}</pre>{{end}}</td>
-          <td>{{if .Expected}}<pre>{{.Expected}}</pre>{{end}}</td>
-          <td>{{if .Actual}}<pre>{{.Actual}}</pre>{{end}}</td>
+          <td>{{if .Message}}<pre tabindex="0">{{.Message}}</pre>{{end}}</td>
+          <td>{{if .HasDiffLines}}{{if .ExpectedLines}}<pre class="diff-output" tabindex="0">{{range .ExpectedLines}}<span class="diff-line{{if .Changed}} diff-removed{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Expected}}<pre tabindex="0">{{.Expected}}</pre>{{end}}</td>
+          <td>{{if .HasDiffLines}}{{if .ActualLines}}<pre class="diff-output" tabindex="0">{{range .ActualLines}}<span class="diff-line{{if .Changed}} diff-added{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Actual}}<pre tabindex="0">{{.Actual}}</pre>{{end}}</td>
         </tr>
       {{end}}
       </tbody>
-    </table>
+    </table></div>
     {{if .HasChartData}}
     <div class="chart-wrap">
       <canvas id="chart-ex-{{.Exercise}}"></canvas>
@@ -1088,10 +1140,12 @@ var studentReportTemplate = `<!doctype html>
     });
     </script>
     {{end}}
-  </div>
+    </div>
+  </section>
   {{end}}
   <script>
-  function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.getElementById('theme-toggle').textContent=n==='dark'?'\u2600\ufe0f':'\ud83c\udf19';}
+  function toggleExercise(button){var expanded=button.getAttribute("aria-expanded")==="true";button.setAttribute("aria-expanded",String(!expanded));button.closest(".exercise-card").querySelector(".table-scroll").hidden=expanded;}
+  function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);try{localStorage.setItem('theme',n);}catch(e){}document.getElementById('theme-toggle').textContent=n==='dark'?'\u2600\ufe0f':'\ud83c\udf19';}
   document.getElementById('theme-toggle').textContent=document.documentElement.getAttribute('data-theme')==='dark'?'\u2600\ufe0f':'\ud83c\udf19';
   </script>
 </body>
@@ -1103,7 +1157,15 @@ var indexReportTemplate = `<!doctype html>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Test Results</title>
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light');</script>
+<script>(function(){
+  var saved, theme = 'dark';
+  try { saved = localStorage.getItem('theme'); } catch (e) {}
+  if (saved === 'light' || saved === 'dark') theme = saved;
+  else {
+    try { if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) theme = 'light'; } catch (e) {}
+  }
+  document.documentElement.setAttribute('data-theme', theme);
+})();</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
 :root{--bg:#f7f7f9;--surface:#fff;--border:#ddd;--text:#1a1a1a;--muted:#555;--th:#f2f2f4;--row-border:#ececec;--metric:#fafafa;--metric-border:#e6e6e6;--pre:#f5f5f5;--link:#1a6fb5;--sidebar:#ebebef;}
@@ -1125,6 +1187,13 @@ h2{font-size:1.05rem;margin-bottom:8px}
 .page{display:none}
 .page.active{display:block}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px}
+.exercise-card{padding:0}
+.exercise-header{position:sticky;top:0;z-index:1;background:var(--surface);border-radius:10px;padding:16px;cursor:pointer}
+.exercise-toggle{display:block;background:none;border:0;padding:0;color:inherit;font:inherit;font-size:1.05rem;font-weight:700;text-align:left;cursor:pointer}
+.exercise-toggle::before{content:"▾ "}
+.exercise-toggle[aria-expanded="false"]::before{content:"▸ "}
+.exercise-header .ex-stats{margin:8px 0 0}
+.exercise-content{padding:0 16px 16px}
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(100px,1fr));gap:8px;margin-top:10px}
 .metric{background:var(--metric);border:1px solid var(--metric-border);border-radius:8px;padding:7px 10px}
 table{width:100%;border-collapse:collapse;margin-bottom:10px}
@@ -1132,7 +1201,17 @@ th,td{border-bottom:1px solid var(--row-border);padding:7px 8px;text-align:left;
 th{background:var(--th);font-weight:600}
 .ok{color:#0f7a34;font-weight:700}
 .fail{color:#b11f1f;font-weight:700}
-pre{white-space:pre-wrap;word-break:break-word;font-size:11px;background:var(--pre);border-radius:6px;padding:6px}
+pre{white-space:pre;font-size:11px;line-height:1.4;max-height:calc(10 * 1.4em + 12px);overflow:auto;background:var(--pre);border-radius:6px;padding:6px}
+.diff-line{display:block;min-height:1.4em}
+.diff-removed{background:#f5dede}
+.diff-added{background:#dceee0}
+[data-theme=dark] .diff-removed{background:#593335}
+[data-theme=dark] .diff-added{background:#294b35}
+.empty-output{color:var(--muted);font-style:italic}
+.table-scroll{overflow-x:auto}
+.table-scroll table{table-layout:fixed;min-width:960px}
+.table-scroll td{overflow-wrap:anywhere}
+@media(max-width:700px){#sidebar{width:140px}#main{padding:12px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ex-stats{font-size:12px;color:var(--muted);margin-bottom:6px}
 .chart-wrap{max-width:520px;margin-top:6px}
 .allpass{color:#0f7a34;font-weight:700}
@@ -1200,10 +1279,11 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:11px;background:var(--p
       </div>
     </div>
     {{range .Groups}}
-    <div class="card">
-      <h2>Exercise {{.Exercise}}</h2>
-      <p class="ex-stats">Passed: <strong>{{.Passed}}</strong> &nbsp; Failed: <strong>{{.Failed}}</strong> &nbsp; Total: <strong>{{len .Results}}</strong></p>
-      <table>
+    <section class="card exercise-card">
+      <div class="exercise-header"><button type="button" class="exercise-toggle" aria-expanded="true" onclick="toggleExercise(this)">Exercise {{.Exercise}}</button>
+      <p class="ex-stats">Passed: <strong>{{.Passed}}</strong> &nbsp; Failed: <strong>{{.Failed}}</strong> &nbsp; Total: <strong>{{len .Results}}</strong></p></div>
+      <div class="exercise-content">
+      <div class="table-scroll"><table>
         <thead><tr>
           <th>Case</th><th>Status</th><th>Failure Type</th><th>Input Size</th>
           <th>Time</th><th>Diagnostics</th><th>Expected</th><th>Actual</th>
@@ -1216,15 +1296,16 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:11px;background:var(--p
           <td>{{.FailureType}}</td>
           <td>{{if gt .InputSize 0}}{{.InputSize}}{{end}}</td>
           <td>{{fmtDuration .Duration}}</td>
-          <td>{{if .Message}}<pre>{{.Message}}</pre>{{end}}</td>
-          <td>{{if .Expected}}<pre>{{.Expected}}</pre>{{end}}</td>
-          <td>{{if .Actual}}<pre>{{.Actual}}</pre>{{end}}</td>
+          <td>{{if .Message}}<pre tabindex="0">{{.Message}}</pre>{{end}}</td>
+          <td>{{if .HasDiffLines}}{{if .ExpectedLines}}<pre class="diff-output" tabindex="0">{{range .ExpectedLines}}<span class="diff-line{{if .Changed}} diff-removed{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Expected}}<pre tabindex="0">{{.Expected}}</pre>{{end}}</td>
+          <td>{{if .HasDiffLines}}{{if .ActualLines}}<pre class="diff-output" tabindex="0">{{range .ActualLines}}<span class="diff-line{{if .Changed}} diff-added{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Actual}}<pre tabindex="0">{{.Actual}}</pre>{{end}}</td>
         </tr>
         {{end}}
         </tbody>
-      </table>
+      </table></div>
       {{if .HasChartData}}<div class="chart-wrap"><canvas id="chart-{{$sid}}-{{.Exercise}}"></canvas></div>{{end}}
-    </div>
+      </div>
+    </section>
     {{end}}
   </div>
   {{end}}
@@ -1245,10 +1326,11 @@ function nav(id,el){
   document.getElementById('main').scrollTop=0;
   return false;
 }
+function toggleExercise(button){var expanded=button.getAttribute("aria-expanded")==="true";button.setAttribute("aria-expanded",String(!expanded));button.closest(".exercise-card").querySelector(".table-scroll").hidden=expanded;}
 function toggleTheme(){
   var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
   document.documentElement.setAttribute('data-theme',n);
-  localStorage.setItem('theme',n);
+  try{localStorage.setItem('theme',n);}catch(e){}
   document.getElementById('theme-toggle').textContent=n==='dark'?'☀️':'🌙';
 }
 document.getElementById('theme-toggle').textContent=document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙';
@@ -1270,7 +1352,15 @@ var summaryReportTemplate = `<!doctype html>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Global Exercise Summary</title>
-  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light');</script>
+  <script>(function(){
+  var saved, theme = 'dark';
+  try { saved = localStorage.getItem('theme'); } catch (e) {}
+  if (saved === 'light' || saved === 'dark') theme = saved;
+  else {
+    try { if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) theme = 'light'; } catch (e) {}
+  }
+  document.documentElement.setAttribute('data-theme', theme);
+})();</script>
   <style>
     :root{--bg:#f7f7f9;--surface:#fff;--border:#ddd;--text:#1a1a1a;--th:#f2f2f4;--row-border:#ececec;--link:#1a6fb5;}
     [data-theme=dark]{--bg:#18181b;--surface:#27272a;--border:#3f3f46;--text:#e4e4e7;--th:#333;--row-border:#3f3f46;--link:#60a5fa;}
@@ -1327,7 +1417,8 @@ var summaryReportTemplate = `<!doctype html>
     </table>
   </div>
   <script>
-  function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('theme',n);document.getElementById('theme-toggle').textContent=n==='dark'?'\u2600\ufe0f':'\ud83c\udf19';}
+  function toggleExercise(button){var expanded=button.getAttribute("aria-expanded")==="true";button.setAttribute("aria-expanded",String(!expanded));button.closest(".exercise-card").querySelector(".table-scroll").hidden=expanded;}
+  function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);try{localStorage.setItem('theme',n);}catch(e){}document.getElementById('theme-toggle').textContent=n==='dark'?'\u2600\ufe0f':'\ud83c\udf19';}
   document.getElementById('theme-toggle').textContent=document.documentElement.getAttribute('data-theme')==='dark'?'\u2600\ufe0f':'\ud83c\udf19';
   </script>
 </body>
