@@ -224,11 +224,25 @@ func run(cfg config) error {
 		return fmt.Errorf("error creating report folder: %w", err)
 	}
 
+	testsByExercise := make(map[int][]testCase, len(selectedNumbers))
+	unitsPerStudent := 0
+	for _, exercise := range selectedNumbers {
+		cases, err := collectTestCases(exerciseFolders[exercise])
+		if err != nil {
+			return fmt.Errorf("exercise %d: %w", exercise, err)
+		}
+		testsByExercise[exercise] = cases
+		if len(cases) > 0 {
+			unitsPerStudent += 1 + len(cases)
+		}
+	}
+	progress := newRunProgress(os.Stderr, unitsPerStudent*len(studentFolders))
+	defer progress.close()
 	allReports := make([]studentReport, 0, len(studentFolders))
 	for _, studentFolder := range studentFolders {
-		report, err := runForStudent(studentFolder, cfg.testsFolder, exerciseFolders, selectedNumbers, cfg.timeout)
+		report, err := runForStudent(studentFolder, testsByExercise, selectedNumbers, cfg.timeout, progress)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error while running student folder %q: %v\n", studentFolder, err)
+			progress.message("error while running student folder %q: %v\n", studentFolder, err)
 			continue
 		}
 		allReports = append(allReports, report)
@@ -238,6 +252,7 @@ func run(cfg config) error {
 		return errors.New("no reports generated")
 	}
 
+	progress.start("Generating HTML reports")
 	summary := buildSummary(allReports)
 
 	studentDatas := make([]studentReportData, 0, len(allReports))
@@ -258,18 +273,19 @@ func run(cfg config) error {
 		}
 		studentDatas = append(studentDatas, data)
 		if err := writeStudentReport(data); err != nil {
-			fmt.Fprintf(os.Stderr, "error writing student report for %q: %v\n", report.StudentName, err)
+			progress.message("error writing student report for %q: %v\n", report.StudentName, err)
 		}
 	}
 
 	if err := writeIndexReport(studentDatas, summary); err != nil {
-		fmt.Fprintf(os.Stderr, "error writing index report: %v\n", err)
+		progress.message("error writing index report: %v\n", err)
 	}
 
 	if err := writeSummaryReport(summary); err != nil {
 		return fmt.Errorf("error writing summary report: %w", err)
 	}
 
+	progress.close()
 	printConsoleSummary(allReports, summary)
 	return nil
 }
@@ -404,8 +420,7 @@ func selectTestNumbers(input string, exerciseFolders map[int]string) ([]int, err
 	return out, nil
 }
 
-func runForStudent(studentFolder string, testsFolder string, exerciseFolders map[int]string, selected []int, timeout time.Duration) (studentReport, error) {
-	_ = testsFolder
+func runForStudent(studentFolder string, testsByExercise map[int][]testCase, selected []int, timeout time.Duration, progress *runProgress) (studentReport, error) {
 	report := studentReport{
 		StudentName: filepath.Base(studentFolder),
 		StudentPath: studentFolder,
@@ -414,20 +429,18 @@ func runForStudent(studentFolder string, testsFolder string, exerciseFolders map
 	}
 
 	if err := removeClassFiles(studentFolder); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not remove .class files in %q: %v\n", studentFolder, err)
+		progress.message("warning: could not remove .class files in %q: %v\n", studentFolder, err)
 	}
 
 	for _, exercise := range selected {
-		testFolder := exerciseFolders[exercise]
-		testCases, err := collectTestCases(testFolder)
-		if err != nil {
-			return report, fmt.Errorf("exercise %d: %w", exercise, err)
-		}
+		testCases := testsByExercise[exercise]
 		if len(testCases) == 0 {
 			continue
 		}
 
+		progress.start(fmt.Sprintf("%s · exercise %d · compiling", report.StudentName, exercise))
 		execInfo, compileErr, compileOutput := prepareExecutable(studentFolder, exercise)
+		progress.advance(1)
 		if execInfo.Cleanup != nil {
 			defer execInfo.Cleanup()
 		}
@@ -449,12 +462,20 @@ func runForStudent(studentFolder string, testsFolder string, exerciseFolders map
 					Message:     trimDiagnostic(compileOutput),
 				})
 			}
+			reason := "compilation failed"
+			if ft == failureSourceMissing {
+				reason = "source missing"
+			}
+			progress.start(fmt.Sprintf("%s · exercise %d · %s; skipping %d tests", report.StudentName, exercise, reason, len(testCases)))
+			progress.advance(len(testCases))
 			continue
 		}
 
 		for _, tc := range testCases {
+			progress.start(fmt.Sprintf("%s · exercise %d · test %s", report.StudentName, exercise, tc.name))
 			result := executeTestCase(execInfo, exercise, tc, timeout)
 			report.Results = append(report.Results, result)
+			progress.advance(1)
 		}
 	}
 
@@ -944,30 +965,6 @@ func writeIndexReport(students []studentReportData, summary summaryReport) error
 		return err
 	}
 	return tpl.Execute(f, data)
-}
-
-func printConsoleSummary(allReports []studentReport, summary summaryReport) {
-	fmt.Println("\n=== Per student results ===")
-	for _, report := range allReports {
-		fmt.Printf(
-			"%s -> total: %d, passed: %d, failed: %d (compile: %d, runtime: %d, diff: %d)\n",
-			report.StudentName,
-			report.Total,
-			report.Passed,
-			report.Failed,
-			report.CompileFails,
-			report.RuntimeFails,
-			report.DiffFails,
-		)
-		fmt.Printf("report: %s\n", filepath.Join(reportRootFolder, sanitizeName(report.StudentName), "report.html"))
-	}
-
-	fmt.Println("\n=== Global summary by exercise ===")
-	for _, row := range summary.Rows {
-		fmt.Printf("Exercise %d -> students: %d  all pass: %d  partial: %d  all fail: %d  compile fail: %d  not submitted: %d\n",
-			row.Exercise, row.Total, row.AllPass, row.Partial, row.AllFail, row.CompileFail, row.NotSubmitted)
-	}
-	fmt.Printf("summary report: %s\n", filepath.Join(reportRootFolder, summarySubfolder, "index.html"))
 }
 
 func fileExists(path string) bool {
