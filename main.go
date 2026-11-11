@@ -1041,10 +1041,10 @@ var studentReportTemplate = `<!doctype html>
     .fail { color: #b11f1f; font-weight: 700; }
     pre { margin: 0; white-space: pre; font-size: 12px; line-height: 1.4; max-height: calc(10 * 1.4em + 16px); overflow: auto; background: var(--pre); border-radius: 6px; padding: 8px; }
     .diff-line { display: block; min-height: 1.4em; }
-    .diff-removed { background: #f5dede; }
-    .diff-added { background: #dceee0; }
-    [data-theme=dark] .diff-removed { background: #593335; }
-    [data-theme=dark] .diff-added { background: #294b35; }
+    .diff-removed { background: #dceee0; }
+    .diff-added { background: #f5dede; }
+    [data-theme=dark] .diff-removed { background: #294b35; }
+    [data-theme=dark] .diff-added { background: #593335; }
     .empty-output { color: var(--muted); font-style: italic; }
     .table-scroll { overflow-x: auto; }
     .table-scroll table { table-layout: fixed; min-width: 960px; }
@@ -1104,8 +1104,8 @@ var studentReportTemplate = `<!doctype html>
           <td>{{if gt .InputSize 0}}{{.InputSize}}{{end}}</td>
           <td>{{fmtDuration .Duration}}</td>
           <td>{{if .Message}}<pre tabindex="0">{{.Message}}</pre>{{end}}</td>
-          <td>{{if .HasDiffLines}}{{if .ExpectedLines}}<pre class="diff-output" tabindex="0">{{range .ExpectedLines}}<span class="diff-line{{if .Changed}} diff-removed{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Expected}}<pre tabindex="0">{{.Expected}}</pre>{{end}}</td>
-          <td>{{if .HasDiffLines}}{{if .ActualLines}}<pre class="diff-output" tabindex="0">{{range .ActualLines}}<span class="diff-line{{if .Changed}} diff-added{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Actual}}<pre tabindex="0">{{.Actual}}</pre>{{end}}</td>
+          <td>{{if .HasDiffLines}}{{if .ExpectedLines}}<pre class="diff-output compare-output" tabindex="0">{{range .ExpectedLines}}<span class="diff-line{{if .Changed}} diff-removed{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Expected}}<pre class="compare-output" tabindex="0">{{.Expected}}</pre>{{end}}</td>
+          <td>{{if .HasDiffLines}}{{if .ActualLines}}<pre class="diff-output compare-output" tabindex="0">{{range .ActualLines}}<span class="diff-line{{if .Changed}} diff-added{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Actual}}<pre class="compare-output" tabindex="0">{{.Actual}}</pre>{{end}}</td>
         </tr>
       {{end}}
       </tbody>
@@ -1142,6 +1142,28 @@ var studentReportTemplate = `<!doctype html>
   </section>
   {{end}}
   <script>
+
+(function syncComparisonScroll() {
+  var programmatic = new WeakMap();
+  document.querySelectorAll('tr').forEach(function(row) {
+    var panes = row.querySelectorAll('.compare-output');
+    if (panes.length !== 2) return;
+    panes.forEach(function(pane, index) {
+      pane.addEventListener('scroll', function() {
+        var last = programmatic.get(pane);
+        if (last && pane.scrollTop === last.top && pane.scrollLeft === last.left) {
+          programmatic.delete(pane);
+          return;
+        }
+        programmatic.delete(pane);
+        var other = panes[1 - index];
+        other.scrollTop = pane.scrollTop;
+        other.scrollLeft = pane.scrollLeft;
+        programmatic.set(other, {top: other.scrollTop, left: other.scrollLeft});
+      });
+    });
+  });
+}());
   function toggleExercise(button){var expanded=button.getAttribute("aria-expanded")==="true";button.setAttribute("aria-expanded",String(!expanded));button.closest(".exercise-card").querySelector(".table-scroll").hidden=expanded;}
   function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);try{localStorage.setItem('theme',n);}catch(e){}document.getElementById('theme-toggle').textContent=n==='dark'?'\u2600\ufe0f':'\ud83c\udf19';}
   document.getElementById('theme-toggle').textContent=document.documentElement.getAttribute('data-theme')==='dark'?'\u2600\ufe0f':'\ud83c\udf19';
@@ -1201,10 +1223,10 @@ th{background:var(--th);font-weight:600}
 .fail{color:#b11f1f;font-weight:700}
 pre{white-space:pre;font-size:11px;line-height:1.4;max-height:calc(10 * 1.4em + 12px);overflow:auto;background:var(--pre);border-radius:6px;padding:6px}
 .diff-line{display:block;min-height:1.4em}
-.diff-removed{background:#f5dede}
-.diff-added{background:#dceee0}
-[data-theme=dark] .diff-removed{background:#593335}
-[data-theme=dark] .diff-added{background:#294b35}
+.diff-removed{background:#dceee0}
+.diff-added{background:#f5dede}
+[data-theme=dark] .diff-removed{background:#294b35}
+[data-theme=dark] .diff-added{background:#593335}
 .empty-output{color:var(--muted);font-style:italic}
 .table-scroll{overflow-x:auto}
 .table-scroll table{table-layout:fixed;min-width:960px}
@@ -1295,8 +1317,8 @@ pre{white-space:pre;font-size:11px;line-height:1.4;max-height:calc(10 * 1.4em + 
           <td>{{if gt .InputSize 0}}{{.InputSize}}{{end}}</td>
           <td>{{fmtDuration .Duration}}</td>
           <td>{{if .Message}}<pre tabindex="0">{{.Message}}</pre>{{end}}</td>
-          <td>{{if .HasDiffLines}}{{if .ExpectedLines}}<pre class="diff-output" tabindex="0">{{range .ExpectedLines}}<span class="diff-line{{if .Changed}} diff-removed{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Expected}}<pre tabindex="0">{{.Expected}}</pre>{{end}}</td>
-          <td>{{if .HasDiffLines}}{{if .ActualLines}}<pre class="diff-output" tabindex="0">{{range .ActualLines}}<span class="diff-line{{if .Changed}} diff-added{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Actual}}<pre tabindex="0">{{.Actual}}</pre>{{end}}</td>
+          <td>{{if .HasDiffLines}}{{if .ExpectedLines}}<pre class="diff-output compare-output" tabindex="0">{{range .ExpectedLines}}<span class="diff-line{{if .Changed}} diff-removed{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Expected}}<pre class="compare-output" tabindex="0">{{.Expected}}</pre>{{end}}</td>
+          <td>{{if .HasDiffLines}}{{if .ActualLines}}<pre class="diff-output compare-output" tabindex="0">{{range .ActualLines}}<span class="diff-line{{if .Changed}} diff-added{{end}}">{{.Text}}</span>{{end}}</pre>{{else}}<span class="empty-output">Empty output</span>{{end}}{{else if .Actual}}<pre class="compare-output" tabindex="0">{{.Actual}}</pre>{{end}}</td>
         </tr>
         {{end}}
         </tbody>
@@ -1324,6 +1346,28 @@ function nav(id,el){
   document.getElementById('main').scrollTop=0;
   return false;
 }
+
+(function syncComparisonScroll() {
+  var programmatic = new WeakMap();
+  document.querySelectorAll('tr').forEach(function(row) {
+    var panes = row.querySelectorAll('.compare-output');
+    if (panes.length !== 2) return;
+    panes.forEach(function(pane, index) {
+      pane.addEventListener('scroll', function() {
+        var last = programmatic.get(pane);
+        if (last && pane.scrollTop === last.top && pane.scrollLeft === last.left) {
+          programmatic.delete(pane);
+          return;
+        }
+        programmatic.delete(pane);
+        var other = panes[1 - index];
+        other.scrollTop = pane.scrollTop;
+        other.scrollLeft = pane.scrollLeft;
+        programmatic.set(other, {top: other.scrollTop, left: other.scrollLeft});
+      });
+    });
+  });
+}());
 function toggleExercise(button){var expanded=button.getAttribute("aria-expanded")==="true";button.setAttribute("aria-expanded",String(!expanded));button.closest(".exercise-card").querySelector(".table-scroll").hidden=expanded;}
 function toggleTheme(){
   var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
