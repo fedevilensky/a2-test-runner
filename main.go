@@ -236,11 +236,12 @@ func run(cfg config) error {
 			unitsPerStudent += 1 + len(cases)
 		}
 	}
-	progress := newRunProgress(os.Stderr, unitsPerStudent*len(studentFolders))
+	progress := newRunProgress(os.Stderr, unitsPerStudent*len(studentFolders), len(studentFolders))
 	defer progress.close()
 	allReports := make([]studentReport, 0, len(studentFolders))
 	for _, studentFolder := range studentFolders {
 		report, err := runForStudent(studentFolder, testsByExercise, selectedNumbers, cfg.timeout, progress)
+		progress.studentFinished(filepath.Base(studentFolder))
 		if err != nil {
 			progress.message("error while running student folder %q: %v\n", studentFolder, err)
 			continue

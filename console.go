@@ -18,21 +18,22 @@ import (
 )
 
 type runProgress struct {
-	mu          sync.Mutex
-	out         io.Writer
-	terminal    bool
-	fd          int
-	bar         progress.Model
-	total, done int
-	activity    string
-	started     time.Time
-	stop        chan struct{}
-	finished    chan struct{}
-	once        sync.Once
+	mu                          sync.Mutex
+	out                         io.Writer
+	terminal                    bool
+	fd                          int
+	bar                         progress.Model
+	total, done                 int
+	studentsTotal, studentsDone int
+	activity                    string
+	started                     time.Time
+	stop                        chan struct{}
+	finished                    chan struct{}
+	once                        sync.Once
 }
 
-func newRunProgress(out *os.File, total int) *runProgress {
-	p := &runProgress{out: out, fd: int(out.Fd()), terminal: term.IsTerminal(int(out.Fd())) && os.Getenv("TERM") != "dumb", total: total, started: time.Now(), stop: make(chan struct{}), finished: make(chan struct{}), bar: progress.New(progress.WithWidth(22), progress.WithoutPercentage(), progress.WithSolidFill("#6d9bce"))}
+func newRunProgress(out *os.File, total, studentsTotal int) *runProgress {
+	p := &runProgress{out: out, fd: int(out.Fd()), terminal: term.IsTerminal(int(out.Fd())) && os.Getenv("TERM") != "dumb", total: total, studentsTotal: studentsTotal, started: time.Now(), stop: make(chan struct{}), finished: make(chan struct{}), bar: progress.New(progress.WithWidth(14), progress.WithoutPercentage(), progress.WithSolidFill("#6d9bce"))}
 	if p.terminal {
 		go func() {
 			defer close(p.finished)
@@ -83,16 +84,26 @@ func (p *runProgress) advance(n int) {
 	}
 }
 
+func (p *runProgress) studentFinished(name string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.studentsDone < p.studentsTotal {
+		p.studentsDone++
+	}
+	p.activity = "Finished " + safeConsoleText(name)
+	p.render()
+}
+
 func (p *runProgress) render() {
 	if !p.terminal {
-		fmt.Fprintf(p.out, "[%d/%d] %s\n", p.done, p.total, p.activity)
+		fmt.Fprintf(p.out, "[%d/%d] Students %d/%d (%d pending) · %s\n", p.done, p.total, p.studentsDone, p.studentsTotal, p.studentsTotal-p.studentsDone, p.activity)
 		return
 	}
 	fraction := 1.0
 	if p.total > 0 {
 		fraction = float64(p.done) / float64(p.total)
 	}
-	line := fmt.Sprintf("%s %d/%d  %s  %s", p.bar.ViewAs(fraction), p.done, p.total, time.Since(p.started).Round(time.Second), p.activity)
+	line := fmt.Sprintf("%s %d/%d  Students %d/%d (%d pending)  %s  %s", p.bar.ViewAs(fraction), p.done, p.total, p.studentsDone, p.studentsTotal, p.studentsTotal-p.studentsDone, time.Since(p.started).Round(time.Second), p.activity)
 	width, _, err := term.GetSize(p.fd)
 	if err == nil && width > 1 {
 		line = ansi.Truncate(line, width-1, "…")

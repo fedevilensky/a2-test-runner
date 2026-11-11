@@ -14,9 +14,11 @@ func TestProgressCountsSkippedTests(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer output.Close()
-	p := newRunProgress(output, 3)
+	p := newRunProgress(output, 3, 2)
 	cases := []testCase{{name: "one", inputPath: "one.in.txt"}, {name: "two", inputPath: "two.in.txt"}}
 	report, err := runForStudent(student, map[int][]testCase{1: cases}, []int{1}, time.Second, p)
+	p.studentFinished("first")
+	p.studentFinished("second")
 	p.close()
 	if err != nil {
 		t.Fatal(err)
@@ -29,7 +31,7 @@ func TestProgressCountsSkippedTests(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(data)
-	if !strings.Contains(text, "[0/3]") || !strings.Contains(text, "skipping 2 tests") || strings.Contains(text, "\x1b") {
+	if !strings.Contains(text, "[0/3]") || !strings.Contains(text, "skipping 2 tests") || !strings.Contains(text, "Students 1/2 (1 pending)") || !strings.Contains(text, "Students 2/2 (0 pending)") || strings.Contains(text, "\x1b") {
 		t.Fatalf("unexpected redirected output: %q", text)
 	}
 }
