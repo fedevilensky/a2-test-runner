@@ -33,7 +33,7 @@ func diffOutputLines(expected, actual, diff string) ([]outputLine, []outputLine,
 	}
 	left, right := makeLines(expected), makeLines(actual)
 	oldLine, newLine, inHunk, foundChange := 0, 0, false, false
-	for _, line := range strings.Split(diff, "\n") {
+	for line := range strings.SplitSeq(diff, "\n") {
 		if matches := diffHunkHeader.FindStringSubmatch(line); matches != nil {
 			oldLine, _ = strconv.Atoi(matches[1])
 			newLine, _ = strconv.Atoi(matches[2])

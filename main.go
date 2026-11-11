@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -108,6 +107,8 @@ type exerciseGroup struct {
 	Passed       int
 	Failed       int
 	HasChartData bool
+	FitAll       complexityFit
+	FitPassing   complexityFit
 }
 
 type studentReportData struct {
@@ -371,8 +372,8 @@ func selectTestNumbers(input string, exerciseFolders map[int]string) ([]int, err
 	}
 
 	selected := map[int]struct{}{}
-	parts := strings.Split(input, ",")
-	for _, part := range parts {
+	parts := strings.SplitSeq(input, ",")
+	for part := range parts {
 		part = strings.TrimSpace(part)
 		if part == "" {
 			continue
@@ -517,8 +518,8 @@ func collectTestCases(testFolder string) ([]testCase, error) {
 }
 
 func guessExpectedPath(inputPath string) string {
-	if strings.HasSuffix(inputPath, ".in.txt") {
-		return strings.TrimSuffix(inputPath, ".in.txt") + ".out.txt"
+	if before, ok := strings.CutSuffix(inputPath, ".in.txt"); ok {
+		return before + ".out.txt"
 	}
 	return strings.Replace(inputPath, ".in.", ".out.", 1)
 }
@@ -550,14 +551,17 @@ func groupResultsByExercise(results []testCaseResult) []exerciseGroup {
 		} else {
 			g.Failed++
 		}
-		if r.InputSize > 0 && r.FailureType != failureCompile && r.FailureType != failureSourceMissing {
+		if r.InputSize > 0 && r.Duration > 0 {
 			g.HasChartData = true
 		}
 	}
 	sort.Ints(order)
 	out := make([]exerciseGroup, 0, len(order))
 	for _, ex := range order {
-		out = append(out, *groups[ex])
+		g := groups[ex]
+		g.FitAll = fitComplexity(timingPoints(g.Results, false))
+		g.FitPassing = fitComplexity(timingPoints(g.Results, true))
+		out = append(out, *g)
 	}
 	return out
 }
@@ -845,26 +849,7 @@ func writeStudentReport(data studentReportData) error {
 			}
 			return fmt.Sprintf("%.1f%%", float64(a)*100/float64(b))
 		},
-		"scatterData": func(results []testCaseResult) template.JS {
-			type point struct {
-				X     int     `json:"x"`
-				Y     float64 `json:"y"`
-				Label string  `json:"label"`
-			}
-			pts := make([]point, 0, len(results))
-			for _, r := range results {
-				if r.InputSize <= 0 || r.FailureType == failureCompile || r.FailureType == failureSourceMissing {
-					continue
-				}
-				pts = append(pts, point{
-					X:     r.InputSize,
-					Y:     float64(r.Duration.Milliseconds()),
-					Label: r.CaseName,
-				})
-			}
-			b, _ := json.Marshal(pts)
-			return template.JS(b)
-		},
+		"chartConfig": complexityChartConfig,
 	}).Parse(studentReportTemplate)
 	if err != nil {
 		return err
@@ -917,50 +902,8 @@ func writeIndexReport(students []studentReportData, summary summaryReport) error
 		"fmtDuration": func(d time.Duration) string {
 			return fmt.Sprintf("%.3fs", d.Seconds())
 		},
-		"sanitizeID": sanitizeName,
-		"chartConfig": func(results []testCaseResult) template.JS {
-			type point struct {
-				X     int     `json:"x"`
-				Y     float64 `json:"y"`
-				Label string  `json:"label"`
-			}
-			pts := make([]point, 0, len(results))
-			for _, r := range results {
-				if r.InputSize <= 0 || r.FailureType == failureCompile || r.FailureType == failureSourceMissing {
-					continue
-				}
-				pts = append(pts, point{
-					X:     r.InputSize,
-					Y:     float64(r.Duration.Milliseconds()),
-					Label: r.CaseName,
-				})
-			}
-			cfg := map[string]interface{}{
-				"type": "scatter",
-				"data": map[string]interface{}{
-					"datasets": []interface{}{
-						map[string]interface{}{
-							"label":           "Input Size vs Time (ms)",
-							"data":            pts,
-							"backgroundColor": "rgba(59,130,246,0.7)",
-							"pointRadius":     5,
-						},
-					},
-				},
-				"options": map[string]interface{}{
-					"plugins": map[string]interface{}{
-						"legend": map[string]interface{}{"display": false},
-						"title":  map[string]interface{}{"display": true, "text": "Input Size vs Time"},
-					},
-					"scales": map[string]interface{}{
-						"x": map[string]interface{}{"title": map[string]interface{}{"display": true, "text": "Input Size"}, "type": "linear"},
-						"y": map[string]interface{}{"title": map[string]interface{}{"display": true, "text": "Time (ms)"}, "beginAtZero": true},
-					},
-				},
-			}
-			b, _ := json.Marshal(cfg)
-			return template.JS(b)
-		},
+		"sanitizeID":  sanitizeName,
+		"chartConfig": complexityChartConfig,
 	}).Parse(indexReportTemplate)
 	if err != nil {
 		return err
@@ -1051,7 +994,10 @@ var studentReportTemplate = `<!doctype html>
     .table-scroll td { overflow-wrap: anywhere; }
     @media (max-width: 700px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } body { margin: 12px; } }
     .ex-stats { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
-    .chart-wrap { max-width: 560px; margin-top: 8px; }
+    .chart-wrap { max-width: 700px; margin-top: 8px; }
+    .fit-summary { font-size: 13px; line-height: 1.45; }
+    .fit-summary p { margin: 6px 0; }
+    .fit-caveat { color: var(--muted); }
     #theme-toggle { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font-size: 14px; }
   </style>
 </head>
@@ -1113,29 +1059,18 @@ var studentReportTemplate = `<!doctype html>
     {{if .HasChartData}}
     <div class="chart-wrap">
       <canvas id="chart-ex-{{.Exercise}}"></canvas>
+      <div class="fit-summary">
+        <p><strong>All timed cases:</strong> {{if .FitAll.Available}}{{.FitAll.Best}} ({{.FitAll.Count}} cases, {{.FitAll.Distinct}} sizes). {{.FitAll.Note}}{{else}}{{.FitAll.Note}}{{end}}</p>
+        <p><strong>Passing cases only:</strong> {{if .FitPassing.Available}}{{.FitPassing.Best}} ({{.FitPassing.Count}} cases, {{.FitPassing.Distinct}} sizes). {{.FitPassing.Note}}{{else}}{{.FitPassing.Note}}{{end}}</p>
+        <p class="fit-caveat">Suggestions only; input sizes come from filenames and numbers below 10 may be case identifiers. Timed failures, including timeouts, are included in the all-cases fit; timeouts are lower bounds. Timings include process startup.</p>
+        <details><summary>Compare candidate errors (RMSE in ms)</summary>
+          <p><strong>All cases:</strong> {{range .FitAll.Candidates}}{{.Name}}: {{printf "%.3g" .RMSE}} &nbsp; {{else}}Unavailable{{end}}</p>
+          <p><strong>Passing cases:</strong> {{range .FitPassing.Candidates}}{{.Name}}: {{printf "%.3g" .RMSE}} &nbsp; {{else}}Unavailable{{end}}</p>
+        </details>
+      </div>
     </div>
     <script>
-    new Chart(document.getElementById('chart-ex-{{.Exercise}}'), {
-      type: 'scatter',
-      data: {
-        datasets: [{
-          label: 'Input Size vs Time (ms)',
-          data: {{scatterData .Results}},
-          backgroundColor: 'rgba(59,130,246,0.7)',
-          pointRadius: 5
-        }]
-      },
-      options: {
-        plugins: {
-          legend: { display: false },
-          title: { display: true, text: 'Input Size vs Time' }
-        },
-        scales: {
-          x: { title: { display: true, text: 'Input Size' }, type: 'linear' },
-          y: { title: { display: true, text: 'Time (ms)' }, beginAtZero: true }
-        }
-      }
-    });
+    new Chart(document.getElementById('chart-ex-{{.Exercise}}'), {{chartConfig .}});
     </script>
     {{end}}
     </div>
@@ -1233,7 +1168,10 @@ pre{white-space:pre;font-size:11px;line-height:1.4;max-height:calc(10 * 1.4em + 
 .table-scroll td{overflow-wrap:anywhere}
 @media(max-width:700px){#sidebar{width:140px}#main{padding:12px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ex-stats{font-size:12px;color:var(--muted);margin-bottom:6px}
-.chart-wrap{max-width:520px;margin-top:6px}
+.chart-wrap{max-width:700px;margin-top:6px}
+.fit-summary{font-size:12px;line-height:1.45}
+.fit-summary p{margin:6px 0}
+.fit-caveat{color:var(--muted)}
 .allpass{color:#0f7a34;font-weight:700}
 .partial{color:#b07800;font-weight:700}
 .allfail{color:#b11f1f;font-weight:700}
@@ -1323,7 +1261,15 @@ pre{white-space:pre;font-size:11px;line-height:1.4;max-height:calc(10 * 1.4em + 
         {{end}}
         </tbody>
       </table></div>
-      {{if .HasChartData}}<div class="chart-wrap"><canvas id="chart-{{$sid}}-{{.Exercise}}"></canvas></div>{{end}}
+      {{if .HasChartData}}<div class="chart-wrap"><canvas id="chart-{{$sid}}-{{.Exercise}}"></canvas><div class="fit-summary">
+        <p><strong>All timed cases:</strong> {{if .FitAll.Available}}{{.FitAll.Best}} ({{.FitAll.Count}} cases, {{.FitAll.Distinct}} sizes). {{.FitAll.Note}}{{else}}{{.FitAll.Note}}{{end}}</p>
+        <p><strong>Passing cases only:</strong> {{if .FitPassing.Available}}{{.FitPassing.Best}} ({{.FitPassing.Count}} cases, {{.FitPassing.Distinct}} sizes). {{.FitPassing.Note}}{{else}}{{.FitPassing.Note}}{{end}}</p>
+        <p class="fit-caveat">Suggestions only; input sizes come from filenames and numbers below 10 may be case identifiers. Timed failures, including timeouts, are included in the all-cases fit; timeouts are lower bounds. Timings include process startup.</p>
+        <details><summary>Compare candidate errors (RMSE in ms)</summary>
+          <p><strong>All cases:</strong> {{range .FitAll.Candidates}}{{.Name}}: {{printf "%.3g" .RMSE}} &nbsp; {{else}}Unavailable{{end}}</p>
+          <p><strong>Passing cases:</strong> {{range .FitPassing.Candidates}}{{.Name}}: {{printf "%.3g" .RMSE}} &nbsp; {{else}}Unavailable{{end}}</p>
+        </details>
+      </div></div>{{end}}
       </div>
     </section>
     {{end}}
@@ -1332,7 +1278,7 @@ pre{white-space:pre;font-size:11px;line-height:1.4;max-height:calc(10 * 1.4em + 
 </div>
 <script>
 var _cc={
-{{range .Students}}{{$sid := sanitizeID .StudentName}}{{range .Groups}}{{if .HasChartData}}"chart-{{$sid}}-{{.Exercise}}":{{chartConfig .Results}},
+{{range .Students}}{{$sid := sanitizeID .StudentName}}{{range .Groups}}{{if .HasChartData}}"chart-{{$sid}}-{{.Exercise}}":{{chartConfig .}},
 {{end}}{{end}}{{end}}};
 var _ci={};
 function _ic(el){el.querySelectorAll('canvas').forEach(function(c){if(!_ci[c.id]&&_cc[c.id]){_ci[c.id]=new Chart(c,_cc[c.id]);}});}
