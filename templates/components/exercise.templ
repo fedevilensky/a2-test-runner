@@ -1,0 +1,180 @@
+package components
+
+import (
+	"fmt"
+	"github.com/fedevilensky/a2-test-runner/models"
+	"strings"
+)
+
+templ Exercise(group models.ExerciseGroup, chartID string) {
+	<section class="card exercise-card">
+		<div class="exercise-header">
+			<button
+				type="button"
+				class="exercise-toggle"
+				aria-expanded="true"
+				onclick="toggleExercise(this)"
+			>
+				Exercise { group.Exercise }
+			</button>
+			<p class="ex-stats">
+				Passed: <strong>{ group.Passed }</strong> &nbsp; Failed:
+				<strong>{ group.Failed }</strong> &nbsp; Total:
+				<strong>{ len(group.Results) }</strong>
+			</p>
+		</div>
+		<div class="exercise-content">
+			<div class="table-scroll">
+				<table>
+					<thead>
+						<tr>
+							<th>Case</th>
+							<th>Status</th>
+							<th>Failure Type</th>
+							<th>Input Size</th>
+							<th>Time</th>
+							<th>Diagnostics</th>
+							<th>Expected</th>
+							<th>Actual</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, result := range group.Results {
+							<tr>
+								<td>
+									{ result.InputFile }
+									if !result.ExecutedAt.IsZero() {
+										<details>
+											<summary>Execution details</summary>
+											<div>Run: { result.ExecutedAt.Format("2006-01-02 15:04:05 MST") }</div>
+											if len(result.BuildFlags) > 0 {
+												<div>Build flags: { strings.Join(result.BuildFlags, " ") }</div>
+											}
+										</details>
+									}
+								</td>
+								<td>
+									if result.Passed {
+										<span class="ok">PASS</span>
+									} else {
+										<span
+											class="fail"
+										>FAIL</span>
+									}
+									if result.Cached {
+										<span title="Reused from a previous run">(cached)</span>
+									}
+								</td>
+								<td>{ result.FailureType }</td>
+								<td>
+									if result.InputSize > 0 {
+										{ result.InputSize }
+									}
+								</td>
+								<td>{ formatDuration(result.Duration) }</td>
+								<td>
+									if result.Message != "" {
+										<pre tabindex="0">{ result.Message }</pre>
+									}
+								</td>
+								<td>
+									if result.HasDiffLines {
+										if len(result.ExpectedLines) > 0 {
+											<pre
+												class="diff-output compare-output"
+												tabindex="0"
+											>
+												for _, line := range result.ExpectedLines {
+													<span class={ diffLineClass(line.Changed, "removed") }>{ line.Text }</span>
+												}
+											</pre>
+										} else {
+											<span class="empty-output">Empty output</span>
+										}
+									} else if result.Expected != "" {
+										<pre class="compare-output" tabindex="0">{ result.Expected }</pre>
+									}
+								</td>
+								<td>
+									if result.HasDiffLines {
+										if len(result.ActualLines) > 0 {
+											<pre
+												class="diff-output compare-output"
+												tabindex="0"
+											>
+												for _, line := range result.ActualLines {
+													<span class={ diffLineClass(line.Changed, "added") }>{ line.Text }</span>
+												}
+											</pre>
+										} else {
+											<span class="empty-output">Empty output</span>
+										}
+									} else if result.Actual != "" {
+										<pre class="compare-output" tabindex="0">{ result.Actual }</pre>
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+			if group.HasChartData {
+				<div class="chart-wrap">
+					<canvas id={ chartID } data-chart={ string(group.ChartConfig) }></canvas>
+					<div class="fit-summary">
+						<p>
+							<strong>All timed cases:</strong>
+							if group.FitAll.Available {
+								{ group.FitAll.Best } ({ group.FitAll.Count } cases,
+								{ group.FitAll.Distinct } sizes).
+								{ group.FitAll.Note }
+							} else {
+								{ group.FitAll.Note }
+							}
+						</p>
+						<p>
+							<strong>Passing cases only:</strong>
+							if group.FitPassing.Available {
+								{ group.FitPassing.Best } ({ group.FitPassing.Count }
+								cases, { group.FitPassing.Distinct } sizes).
+								{ group.FitPassing.Note }
+							} else {
+								{ group.FitPassing.Note }
+							}
+						</p>
+						<p class="fit-caveat">
+							Suggestions only; input sizes come from filenames and numbers
+							below 10 may be case identifiers. Timed failures, including
+							timeouts, are included in the all-cases fit; timeouts are lower
+							bounds. Timings include process startup.
+						</p>
+						<details>
+							<summary>Compare candidate errors (RMSE in ms)</summary>
+							<p>
+								<strong>All cases:</strong>
+								if len(group.FitAll.Candidates) > 0 {
+									for _, candidate := range group.FitAll.Candidates {
+										{ candidate.Name }: { fmt.Sprintf("%.3g", candidate.RMSE) } &nbsp;
+									}
+								} else {
+									Unavailable
+								}
+							</p>
+							<p>
+								<strong>Passing cases:</strong>
+								if len(group.FitPassing.Candidates) > 0 {
+									for _, candidate := range group.FitPassing.Candidates {
+										{ candidate.Name }: { fmt.Sprintf("%.3g", candidate.RMSE) }
+										&nbsp; 
+									}
+								} else {
+									Unavailable
+								}
+							</p>
+						</details>
+					</div>
+				</div>
+			}
+		</div>
+	</section>
+}

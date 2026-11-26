@@ -1,7 +1,13 @@
 FUZZTIME ?= 10s
 FUZZ_WORKERS ?= 2
 
-.PHONY: fuzz-fit fuzz-large-inputs fuzz-all
+.PHONY: format lint fuzz-fit fuzz-large-inputs fuzz-all
+
+format:
+	go tool gofumpt -w .
+
+lint:
+	go tool golangci-lint run ./...
 
 fuzz-fit:
 	go test -run='^$$' -fuzz='^FuzzFitComplexity$$' -fuzztime=$(FUZZTIME) -parallel=$(FUZZ_WORKERS)

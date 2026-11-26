@@ -1,0 +1,62 @@
+package server
+
+import "github.com/fedevilensky/a2-test-runner/templates/components"
+
+templ page() {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Test runner</title>
+			@components.ThemeInit()
+			<style>
+:root{color-scheme:light;--bg:#f4f6fa;--surface:#fff;--text:#1d2736;--border:#dbe1ea;--control:#edf2f9;--input-border:#aab6c7;--drop-active:#e1ecff;--muted:#536275;--row-border:#eee;--link:#205bb1;--error:#a51e2d}[data-theme="dark"]{color-scheme:dark;--bg:#18181b;--surface:#27272a;--text:#e4e4e7;--border:#3f3f46;--control:#333;--input-border:#71717a;--drop-active:#243a59;--muted:#a1a1aa;--row-border:#3f3f46;--link:#60a5fa;--error:#ff8995}body{font:16px system-ui,sans-serif;background:var(--bg);color:var(--text);margin:0}main{max-width:1100px;margin:auto;padding:2rem}h1{margin-bottom:.3rem}section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin:1rem 0}label{display:block;font-weight:600;margin:.7rem 0 .3rem}input,select,textarea,button{font:inherit;padding:.5rem;color:var(--text);background:var(--surface);border:1px solid var(--input-border);border-radius:5px}input[type=text]{max-width:100%;box-sizing:border-box}button{cursor:pointer;background:var(--control)}button.primary{background:#235db8;color:white;border:0}.row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.wide{flex:1;min-width:14rem}.drop{border:2px dashed var(--input-border);border-radius:8px;padding:1rem;text-align:center;margin:.7rem 0}.drop.active{background:var(--drop-active)}.muted{color:var(--muted);font-size:.9rem}.student{padding:.7rem 0;border-bottom:1px solid var(--row-border)}.student label{display:inline;font-weight:normal}.student details{margin-left:1.5rem}.student input[type=text]{width:14rem}pre{white-space:pre-wrap}.error{color:var(--error)}dialog{max-width:90vw;min-width:300px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)}dialog button.dir{display:block;width:100%;text-align:left;margin:.2rem 0}a{color:var(--link)}.progress-card{padding:.75rem;border:1px solid var(--border);border-radius:8px;background:var(--bg)}.progress-top{display:flex;justify-content:space-between;gap:.5rem;font-size:.85rem;font-weight:700}.progress-track{display:block;width:100%;height:.7rem;margin:.55rem 0;appearance:none;border:0;border-radius:99px;overflow:hidden;background:var(--border)}.progress-track::-webkit-progress-bar{background:var(--border);border-radius:99px}.progress-track::-webkit-progress-value{background:linear-gradient(90deg,#3c7dd8,#6ca9ee);border-radius:99px}.progress-track::-moz-progress-bar{background:linear-gradient(90deg,#3c7dd8,#6ca9ee);border-radius:99px}.progress-meta,.progress-activity{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere}.table-scroll{overflow-x:auto}.summary-table{border-collapse:collapse;width:100%;font-size:.9rem}.summary-table th,.summary-table td{text-align:left;padding:.5rem;border-bottom:1px solid var(--border)}.summary-table th{background:var(--control);white-space:nowrap}.summary-table td:not(:first-child){text-align:center}body{display:flex;min-height:100vh}aside{position:sticky;top:0;height:100vh;box-sizing:border-box;width:255px;flex:none;padding:1rem;background:var(--surface);border-right:1px solid var(--border);overflow:auto}aside h2{font-size:1rem}aside a{display:block;padding:.35rem 0;overflow-wrap:anywhere}aside pre{font-size:.8rem;max-height:14rem;overflow:auto}main{flex:1;min-width:0;width:100%;max-width:none;margin:0;padding:1.5rem}#setup{max-width:1100px;margin:auto}#report-panel iframe{width:100%;height:calc(100vh - 7rem);border:1px solid var(--border);border-radius:8px;background:var(--surface)}[hidden]{display:none!important}@media(max-width:700px){body{display:block}aside{position:relative;width:auto;height:auto;max-height:40vh;border-right:0;border-bottom:1px solid var(--border)}main{padding:1rem}#report-panel iframe{height:70vh}}
+aside{padding:0;background:var(--sidebar,var(--surface))}aside>h2,aside>button,aside>p,aside>.progress-card{margin-left:14px;margin-right:14px}aside>h2:first-child{padding:12px 14px;margin:0;border-bottom:1px solid var(--border)}aside nav{padding:6px}aside nav h2{padding:0 10px}aside nav>a,.report-row a{display:block;padding:5px 10px;border-radius:6px;color:var(--text);font-size:13px;text-decoration:none}aside nav>a:hover,.report-row:hover,.report-row.active{background:var(--control)}.report-row{display:flex;align-items:center;border-radius:6px}.report-row a{flex:1;min-width:0;overflow-wrap:anywhere}.report-row.active a{font-weight:600}.report-row .rerun{flex:none;padding:4px 7px;border:0;background:transparent;color:var(--muted);font-size:17px;line-height:1}.report-row .rerun:hover,.report-row .rerun:focus-visible{color:var(--text);background:var(--border)}body.report-open main{padding:0}#report-panel iframe{display:block;box-sizing:border-box;height:100vh;border:0;border-radius:0}@media(max-width:700px){#report-panel iframe{height:70vh}}
+</style>
+			<script src="/app.js" defer></script>
+		</head>
+		<body>
+			<aside aria-label="Report index">
+				<h2>Test runner</h2>
+				<button type="button" id="show-setup">Run setup</button>
+				<a href="#run-summary" id="show-summary" hidden>Results summary</a>
+				<nav aria-label="Saved reports">
+					<h2>Reports</h2>
+					<a href="/reports" data-report="/reports">Combined report</a>
+					<a href="/static/summary/" data-report="/static/summary/">Summary</a>
+					<div id="results">Loading…</div>
+				</nav>
+				<h2>Progress</h2>
+				<p id="message" role="alert" class="error"></p>
+				<div class="progress-card">
+					<div class="progress-top"><span id="progress-label">Ready</span><span id="progress-percent">0%</span></div>
+					<progress class="progress-track" id="progress-bar" value="0" max="1" aria-label="Run progress"></progress>
+					<div class="progress-meta" id="progress-counts">0 / 0 steps · 0 / 0 students</div>
+					<p class="progress-activity" id="progress-activity" aria-live="polite">No run in progress.</p>
+					<details><summary>Run log</summary><pre id="progress-log"></pre></details>
+				</div>
+			</aside>
+			<main>
+				<div id="setup">
+					<div class="row"><h1 class="wide">Test runner</h1>@components.ThemeButton()</div>
+					<p class="muted">Run tests and browse saved results.</p>
+					<section><h2>Tests folder</h2><div class="row"><input class="wide" id="tests" type="text" placeholder="Path to tests folder"/><button type="button" data-browse="tests">Choose folder</button><button id="scan-tests" type="button">Scan folder</button></div><div class="drop" id="tests-drop">Drop a tests folder here or upload a copy: <label><input id="tests-upload" type="file" webkitdirectory directory multiple/> choose a folder to upload</label></div></section>
+					<section><h2>Students</h2><label for="base">Find folders by base path and pattern</label><div class="row"><input class="wide" id="base" type="text" placeholder="Base path"/><button type="button" data-browse="base">Choose folder</button><input id="pattern" type="text" value="*" aria-label="Folder pattern"/><button id="discover" type="button">Scan folders</button></div><label for="student-path">Add an individual folder</label><div class="row"><input class="wide" id="student-path" type="text" placeholder="Student folder path"/><button type="button" data-browse="student-path">Choose folder</button><button id="add-student" type="button">Add</button></div><div class="drop" id="students-drop">Drop student folders here or upload a copy: <label><input id="students-upload" type="file" webkitdirectory directory multiple/> choose a folder to upload</label></div><p class="muted">Select the folders to run. Expand a student to override the global build settings.</p><div id="students"></div></section>
+					<section><h2>Build settings</h2><div class="row"><div><label for="standard">C++ standard</label><select id="standard"><option>c++11</option><option>c++14</option><option>c++17</option><option>c++20</option><option>c++23</option></select></div><div><label for="optimization">Optimization</label><select id="optimization"><option value="">Compiler default</option><option>-O0</option><option>-O1</option><option>-O2</option><option>-O3</option><option>-Os</option></select></div><div class="wide"><label for="extra">Additional flags (one argument per line)</label><textarea id="extra" rows="2" style="width:100%;box-sizing:border-box" placeholder="-Wall"></textarea></div></div></section>
+					<section><h2>Run selection</h2><label for="timeout">Timeout per test (seconds)</label><input id="timeout" type="number" min="1" max="86400" step="1" value="30"/><label><input id="incremental" type="checkbox"/> Reuse unchanged passing results (incremental run)</label><p class="muted">Leave unchecked to force all selected tests to run. Select exercises or expand an exercise to choose individual input files.</p><div id="selection" aria-live="polite">Choose a tests folder to see its exercises.</div><p><button class="primary" id="run" type="button">Run selected students</button></p></section>
+					<section id="run-summary" hidden>
+						<h2>Results summary</h2>
+						<h3>Per student</h3>
+						<div class="table-scroll"><table class="summary-table"><thead><tr><th>Student</th><th>Total</th><th>Passed</th><th>Failed</th><th>Compile</th><th>Runtime</th><th>Diff</th><th>Missing</th></tr></thead><tbody id="student-summary"></tbody></table></div>
+						<h3>Summary by exercise</h3>
+						<div class="table-scroll"><table class="summary-table"><thead><tr><th>Exercise</th><th>Students</th><th>All pass</th><th>Partial</th><th>All fail</th><th>Compile fail</th><th>Not submitted</th></tr></thead><tbody id="exercise-summary"></tbody></table></div>
+					</section>
+				</div>
+				<div id="report-panel" hidden>
+					<iframe id="report-frame" title="Test report"></iframe>
+				</div>
+			</main>
+		</body>
+	</html>
+}

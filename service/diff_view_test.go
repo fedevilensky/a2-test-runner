@@ -1,21 +1,23 @@
-package main
+package service
 
 import (
 	"os/exec"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/fedevilensky/a2-test-runner/models"
 )
 
 func TestDiffOutputLines(t *testing.T) {
 	cases := []struct {
 		name, expected, actual, diff string
-		left, right                  []outputLine
+		left, right                  []models.OutputLine
 		ok                           bool
 	}{
-		{"replace", "same\nold\nlast\n", "same\nnew\nlast\n", "--- expected\n+++ actual\n@@ -1,3 +1,3 @@\n same\n-old\n+new\n last\n", []outputLine{{Text: "same"}, {Text: "old", Changed: true}, {Text: "last"}}, []outputLine{{Text: "same"}, {Text: "new", Changed: true}, {Text: "last"}}, true},
-		{"insert into empty", "", "new\n", "@@ -0,0 +1 @@\n+new\n", nil, []outputLine{{Text: "new", Changed: true}}, true},
-		{"delete without newline", "old", "", "@@ -1 +0,0 @@\n-old\n\\ No newline at end of file\n", []outputLine{{Text: "old", Changed: true}}, nil, true},
+		{"replace", "same\nold\nlast\n", "same\nnew\nlast\n", "--- expected\n+++ actual\n@@ -1,3 +1,3 @@\n same\n-old\n+new\n last\n", []models.OutputLine{{Text: "same"}, {Text: "old", Changed: true}, {Text: "last"}}, []models.OutputLine{{Text: "same"}, {Text: "new", Changed: true}, {Text: "last"}}, true},
+		{"insert into empty", "", "new\n", "@@ -0,0 +1 @@\n+new\n", nil, []models.OutputLine{{Text: "new", Changed: true}}, true},
+		{"delete without newline", "old", "", "@@ -1 +0,0 @@\n-old\n\\ No newline at end of file\n", []models.OutputLine{{Text: "old", Changed: true}}, nil, true},
 		{"invalid hunk", "old\n", "new\n", "@@ -8 +1 @@\n-old\n+new\n", nil, nil, false},
 		{"unavailable diff", "old", "new", "", nil, nil, false},
 	}

@@ -1,0 +1,318 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/fedevilensky/a2-test-runner/models"
+	"github.com/fedevilensky/a2-test-runner/templates/components"
+)
+
+const studentStatic1 = `<style>
+      :root {
+        --bg: #f7f7f9;
+        --surface: #fff;
+        --border: #ddd;
+        --text: #1a1a1a;
+        --muted: #555;
+        --th: #f2f2f4;
+        --row-border: #ececec;
+        --metric: #fafafa;
+        --metric-border: #e6e6e6;
+        --pre: #f5f5f5;
+        --link: #1a6fb5;
+      }
+      [data-theme="dark"] {
+        --bg: #18181b;
+        --surface: #27272a;
+        --border: #3f3f46;
+        --text: #e4e4e7;
+        --muted: #a1a1aa;
+        --th: #333;
+        --row-border: #3f3f46;
+        --metric: #333;
+        --metric-border: #52525b;
+        --pre: #1e1e21;
+        --link: #60a5fa;
+      }
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        margin: 24px;
+        color: var(--text);
+        background: var(--bg);
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+      }
+      a {
+        color: var(--link);
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .exercise-card {
+        padding: 0;
+      }
+      .exercise-header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--surface);
+        border-radius: 10px;
+        padding: 16px;
+        cursor: pointer;
+      }
+      .exercise-toggle {
+        display: block;
+        background: none;
+        border: 0;
+        padding: 0;
+        color: inherit;
+        font: inherit;
+        font-size: 1.5em;
+        font-weight: 700;
+        text-align: left;
+        cursor: pointer;
+      }
+      .exercise-toggle::before {
+        content: "▾ ";
+      }
+      .exercise-toggle[aria-expanded="false"]::before {
+        content: "▸ ";
+      }
+      .exercise-header .ex-stats {
+        margin: 8px 0 0;
+      }
+      .exercise-content {
+        padding: 0 16px 16px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(120px, 1fr));
+        gap: 8px;
+      }
+      .metric {
+        background: var(--metric);
+        border: 1px solid var(--metric-border);
+        border-radius: 8px;
+        padding: 8px 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+        margin-bottom: 12px;
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--row-border);
+        padding: 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--th);
+      }
+      .ok {
+        color: #0f7a34;
+        font-weight: 700;
+      }
+      .fail {
+        color: #b11f1f;
+        font-weight: 700;
+      }
+      pre {
+        margin: 0;
+        white-space: pre;
+        font-size: 12px;
+        line-height: 1.4;
+        max-height: calc(10 * 1.4em + 16px);
+        overflow: auto;
+        background: var(--pre);
+        border-radius: 6px;
+        padding: 8px;
+      }
+      .diff-line {
+        display: block;
+        min-height: 1.4em;
+      }
+      .diff-removed {
+        background: #dceee0;
+      }
+      .diff-added {
+        background: #f5dede;
+      }
+      [data-theme="dark"] .diff-removed {
+        background: #294b35;
+      }
+      [data-theme="dark"] .diff-added {
+        background: #593335;
+      }
+      .empty-output {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .table-scroll {
+        overflow-x: auto;
+      }
+      .table-scroll table {
+        table-layout: fixed;
+        min-width: 960px;
+      }
+      .table-scroll td {
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 700px) {
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        body {
+          margin: 12px;
+        }
+      }
+      .ex-stats {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 0 0 8px;
+      }
+      .chart-wrap {
+        max-width: 700px;
+        margin-top: 8px;
+      }
+      .fit-summary {
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .fit-summary p {
+        margin: 6px 0;
+      }
+      .fit-caveat {
+        color: var(--muted);
+      }
+      #theme-toggle {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px 10px;
+        cursor: pointer;
+        color: var(--text);
+        font-size: 14px;
+      }
+    </style>`
+const studentStatic2 = `<script>
+      document.querySelectorAll("canvas[data-chart]").forEach(function(c){new Chart(c, JSON.parse(c.dataset.chart));});
+      (function syncComparisonScroll() {
+        var programmatic = new WeakMap();
+        document.querySelectorAll("tr").forEach(function (row) {
+          var panes = row.querySelectorAll(".compare-output");
+          if (panes.length !== 2) return;
+          panes.forEach(function (pane, index) {
+            pane.addEventListener("scroll", function () {
+              var last = programmatic.get(pane);
+              if (
+                last &&
+                pane.scrollTop === last.top &&
+                pane.scrollLeft === last.left
+              ) {
+                programmatic.delete(pane);
+                return;
+              }
+              programmatic.delete(pane);
+              var other = panes[1 - index];
+              other.scrollTop = pane.scrollTop;
+              other.scrollLeft = pane.scrollLeft;
+              programmatic.set(other, {
+                top: other.scrollTop,
+                left: other.scrollLeft,
+              });
+            });
+          });
+        });
+      })();
+      function toggleExercise(button) {
+        var expanded = button.getAttribute("aria-expanded") === "true";
+        button.setAttribute("aria-expanded", String(!expanded));
+        button.closest(".exercise-card").querySelector(".table-scroll").hidden =
+          expanded;
+      }
+      function toggleTheme() {
+        var n =
+          document.documentElement.getAttribute("data-theme") === "dark"
+            ? "light"
+            : "dark";
+        document.documentElement.setAttribute("data-theme", n);
+        try {
+          localStorage.setItem("theme", n);
+        } catch (e) {}
+        document.getElementById("theme-toggle").textContent =
+          n === "dark" ? "\u2600\ufe0f" : "\ud83c\udf19";
+      }
+      document.getElementById("theme-toggle").textContent =
+        document.documentElement.getAttribute("data-theme") === "dark"
+          ? "\u2600\ufe0f"
+          : "\ud83c\udf19";
+    </script>`
+
+templ StudentReportPage(data models.StudentReportData) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Test Report - { data.StudentName }</title>
+			<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+			@components.ThemeInit()
+			@templ.Raw(studentStatic1)
+		</head>
+		<body>
+			<nav
+				style="
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+      "
+			>
+				<a href={ templ.SafeURL(data.IndexPath) }>&#8592; All Students</a>
+				if data.PrevPath != "" {
+					<a href={ templ.SafeURL(data.PrevPath) }>&#8592; { data.PrevName }</a>
+				}
+				<span style="flex: 1"></span>
+				if data.NextPath != "" {
+					<a href={ templ.SafeURL(data.NextPath) }>{ data.NextName } &#8594;</a>
+				}
+				<a href={ templ.SafeURL(data.SummaryPath) }>Summary &#8594;</a>
+				@components.ThemeButton()
+			</nav>
+			<h1>Student Report: { data.StudentName }</h1>
+			<div class="card">
+				<div><strong>Student folder:</strong> { data.StudentPath }</div>
+				<div><strong>Started:</strong> { data.StartedAt.String() }</div>
+				<div><strong>Finished:</strong> { data.FinishedAt.String() }</div>
+				<div class="metrics" style="margin-top: 10px">
+					<div class="metric"><strong>Total:</strong> { data.Total }</div>
+					<div class="metric">
+						<strong>Passed:</strong> { data.Passed } ({ percent(data.Passed, data.Total) })
+					</div>
+					<div class="metric">
+						<strong>Failed:</strong> { data.Failed } ({ percent(data.Failed, data.Total) })
+					</div>
+					<div class="metric">
+						<strong>Compile / Runtime / Diff:</strong> { data.CompileFails } /
+						{ data.RuntimeFails } / { data.DiffFails }
+					</div>
+				</div>
+			</div>
+			for _, group := range data.Groups {
+				@components.Exercise(group, fmt.Sprintf("chart-ex-%d", group.Exercise))
+			}
+			@templ.Raw(studentStatic2)
+		</body>
+	</html>
+}

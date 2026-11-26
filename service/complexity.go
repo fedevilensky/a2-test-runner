@@ -1,12 +1,13 @@
-package main
+package service
 
 import (
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"math"
 	"sort"
 	"strings"
+
+	"github.com/fedevilensky/a2-test-runner/models"
 )
 
 type timingPoint struct {
@@ -181,21 +182,21 @@ func fitComplexity(points []timingPoint) complexityFit {
 	return fit
 }
 
-func timingPoints(results []testCaseResult, passingOnly bool) []timingPoint {
+func timingPoints(results []models.TestCaseResult, passingOnly bool) []timingPoint {
 	points := make([]timingPoint, 0, len(results))
 	for _, r := range results {
 		if r.InputSize <= 0 || r.Duration <= 0 || (passingOnly && !r.Passed) {
 			continue
 		}
-		points = append(points, timingPoint{X: float64(r.InputSize), Y: float64(r.Duration) / 1e6, Label: r.CaseName})
+		points = append(points, timingPoint{X: float64(r.InputSize), Y: float64(r.Duration) / 1e6, Label: strings.TrimSuffix(r.InputFile, ".in.txt")})
 	}
 	return points
 }
 
-func complexityChartConfig(group exerciseGroup) template.JS {
+func complexityChartConfig(group models.ExerciseGroup, fitAll, fitPassing complexityFit) string {
 	passing, failing := []timingPoint{}, []timingPoint{}
 	for _, r := range group.Results {
-		p := timingPoints([]testCaseResult{r}, false)
+		p := timingPoints([]models.TestCaseResult{r}, false)
 		if len(p) == 0 {
 			continue
 		}
@@ -213,7 +214,7 @@ func complexityChartConfig(group exerciseGroup) template.JS {
 		label, color string
 		fit          complexityFit
 		dashed       bool
-	}{{"All cases", "#396ac6", group.FitAll, false}, {"Passing only", "#b07716", group.FitPassing, true}} {
+	}{{"All cases", "#396ac6", fitAll, false}, {"Passing only", "#b07716", fitPassing, true}} {
 		if !item.fit.Available {
 			continue
 		}
@@ -226,7 +227,7 @@ func complexityChartConfig(group exerciseGroup) template.JS {
 	cfg := map[string]any{"type": "scatter", "data": map[string]any{"datasets": datasets}, "options": map[string]any{"plugins": map[string]any{"legend": map[string]any{"display": true}, "title": map[string]any{"display": true, "text": "Input size vs time (ms)"}}, "scales": map[string]any{"x": map[string]any{"title": map[string]any{"display": true, "text": "Input size (from filename)"}, "type": "linear"}, "y": map[string]any{"title": map[string]any{"display": true, "text": "Time (ms)"}, "beginAtZero": true}}}}
 	b, err := json.Marshal(cfg)
 	if err != nil {
-		return template.JS("{}")
+		return "{}"
 	}
-	return template.JS(b)
+	return string(b)
 }
