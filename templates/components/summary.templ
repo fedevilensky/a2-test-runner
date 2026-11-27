@@ -1,0 +1,32 @@
+package components
+
+import "github.com/fedevilensky/a2-test-runner/models"
+
+templ SummaryTable(rows []models.SummaryRow, standalone bool) {
+	<table class={ summaryTableClass(standalone) }>
+		<thead>
+			<tr>
+				<th>Exercise</th>
+				<th class="tc">Students</th>
+				<th class="tc">All Pass</th>
+				<th class="tc">Partial</th>
+				<th class="tc">All Fail</th>
+				<th class="tc">Compile Fail</th>
+				<th class="tc">Not Submitted</th>
+			</tr>
+		</thead>
+		<tbody>
+			for _, row := range rows {
+				<tr>
+					<td style="font-weight: 600">{ row.Exercise }</td>
+					<td class="tc">{ row.Total }</td>
+					<td class="tc allpass">{ row.AllPass }</td>
+					<td class="tc partial">{ row.Partial }</td>
+					<td class="tc allfail">{ row.AllFail }</td>
+					<td class="tc compile">{ row.CompileFail }</td>
+					<td class="tc missing">{ row.NotSubmitted }</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+}

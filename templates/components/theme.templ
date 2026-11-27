@@ -1,0 +1,30 @@
+package components
+
+const themeInit = `<script>
+      (function () {
+        var saved,
+          theme = "dark";
+        try {
+          saved = localStorage.getItem("theme");
+        } catch (e) {}
+        if (saved === "light" || saved === "dark") theme = saved;
+        else {
+          try {
+            if (
+              window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: light)").matches
+            )
+              theme = "light";
+          } catch (e) {}
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>`
+
+templ ThemeInit() {
+	@templ.Raw(themeInit)
+}
+
+templ ThemeButton() {
+	<button id="theme-toggle" onclick="toggleTheme()">🌙</button>
+}
