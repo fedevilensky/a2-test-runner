@@ -13,12 +13,16 @@ It supports:
 
 ## Ways to run
 
+You can either clone this repo and run `go run . <options>` or use the module
+path with `go run github.com/fedevilensky/a2-test-runner@latest <options>`.
+Either approach works, but the examples below use the module path.
+
 The command line runs once and prints progress and summaries in the terminal.
 Specify a student folder or glob pattern, select all exercises or numbers and
 ranges, and apply C++ flags to the whole run:
 
 ```bash
-go run . -s ./student-a
+go run github.com/fedevilensky/a2-test-runner@latest -s ./student-a
 ```
 
 The local server stays running while you configure runs and browse reports.
@@ -27,7 +31,7 @@ exercises or individual input files, and set global or per-student C++ flags.
 The browser shows live progress and reports as each student finishes:
 
 ```bash
-go run . serve --listen 8080
+go run github.com/fedevilensky/a2-test-runner@latest serve --listen 8080
 ```
 
 Both modes write SQLite data and static HTML reports.
@@ -36,7 +40,7 @@ Both modes use `test-results` by default and can use the same output directory.
 When the server opens the output directory used by a CLI run, its saved results
 appear in the report sidebar. For relative output paths, start both commands from
 the same working directory.
-Run `go run . --help` for CLI options and `go run . serve --help` for server options.
+Run `go run github.com/fedevilensky/a2-test-runner@latest --help` for CLI options and `go run github.com/fedevilensky/a2-test-runner@latest serve --help` for server options.
 
 ## Command-line options
 
@@ -89,25 +93,25 @@ If both exist, C++ is used.
 Run all exercises for one student (uses `./tests` by default):
 
 ```bash
-go run . -s ./student-a
+go run github.com/fedevilensky/a2-test-runner@latest -s ./student-a
 ```
 
 Run all exercises for one student with an explicit tests folder:
 
 ```bash
-go run . -t ./Pruebas -s ./student-a
+go run github.com/fedevilensky/a2-test-runner@latest -t ./Pruebas -s ./student-a
 ```
 
 Run selected exercises for one student:
 
 ```bash
-go run . -n 1-3,5,8 -s ./student-a
+go run github.com/fedevilensky/a2-test-runner@latest -n 1-3,5,8 -s ./student-a
 ```
 
 Run selected exercises for all matching folders:
 
 ```bash
-go run . -n 1-6 -p "./students/*"
+go run github.com/fedevilensky/a2-test-runner@latest -n 1-6 -p "./students/*"
 ```
 
 ## Local server
@@ -115,7 +119,7 @@ go run . -n 1-6 -p "./students/*"
 Start the server and choose a port (8080 is the default):
 
 ```bash
-go run . serve --listen 8080 --output-dir test-results
+go run github.com/fedevilensky/a2-test-runner@latest serve --listen 8080 --output-dir test-results
 ```
 
 Open `http://127.0.0.1:8080`. The server listens on the local loopback address.
