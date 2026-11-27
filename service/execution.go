@@ -39,7 +39,10 @@ func EffectiveFlags(global, student models.BuildSettings) ([]string, error) {
 		standard = "c++11"
 	}
 	standard = strings.TrimPrefix(standard, "-std=")
-	allowedStandards := map[string]bool{"c++11": true, "c++14": true, "c++17": true, "c++20": true, "c++23": true, "gnu++11": true, "gnu++14": true, "gnu++17": true, "gnu++20": true, "gnu++23": true}
+	allowedStandards := map[string]bool{
+		"c++11": true, "c++14": true, "c++17": true, "c++20": true, "c++23": true,
+		"gnu++11": true, "gnu++14": true, "gnu++17": true, "gnu++20": true, "gnu++23": true,
+	}
 	if !allowedStandards[standard] {
 		return nil, fmt.Errorf("unsupported C++ standard %q", standard)
 	}
@@ -67,7 +70,11 @@ func EffectiveFlags(global, student models.BuildSettings) ([]string, error) {
 		flags = append(flags, optimization)
 	}
 	for _, flag := range extra {
-		if !strings.HasPrefix(flag, "-") || (flag == "-" || flag == "--") || strings.ContainsRune(flag, '\x00') || strings.HasPrefix(flag, "-std=") || strings.HasPrefix(flag, "-O") || strings.HasPrefix(flag, "-o") || strings.HasPrefix(flag, "--output") || flag == "-c" || flag == "-S" || flag == "-E" || strings.HasPrefix(flag, "-x") {
+		if !strings.HasPrefix(flag, "-") || flag == "-" || flag == "--" ||
+			strings.ContainsRune(flag, '\x00') || strings.HasPrefix(flag, "-std=") ||
+			strings.HasPrefix(flag, "-O") || strings.HasPrefix(flag, "-o") ||
+			strings.HasPrefix(flag, "--output") || flag == "-c" || flag == "-S" ||
+			flag == "-E" || strings.HasPrefix(flag, "-x") {
 			return nil, fmt.Errorf("invalid extra compiler argument %q", flag)
 		}
 		flags = append(flags, flag)
@@ -149,7 +156,9 @@ func collectCases(dir string) ([]testCase, error) {
 		}
 		n, _ := strconv.Atoi(re.FindString(e.Name()))
 		prefix := strings.TrimSuffix(e.Name(), ".in.txt")
-		out = append(out, testCase{e.Name(), filepath.Join(dir, e.Name()), filepath.Join(dir, prefix+".out.txt"), n})
+		out = append(out, testCase{
+			e.Name(), filepath.Join(dir, e.Name()), filepath.Join(dir, prefix+".out.txt"), n,
+		})
 	}
 	return out, nil
 }
@@ -171,7 +180,9 @@ func DiscoverTestSuite(root string) ([]models.AvailableExercise, error) {
 		if err != nil {
 			return nil, fmt.Errorf("exercise %d: %w", number, err)
 		}
-		exercise := models.AvailableExercise{Number: number, Folder: filepath.Base(folders[number]), Cases: make([]string, 0, len(cases))}
+		exercise := models.AvailableExercise{
+			Number: number, Folder: filepath.Base(folders[number]), Cases: make([]string, 0, len(cases)),
+		}
 		for _, test := range cases {
 			exercise.Cases = append(exercise.Cases, test.name)
 		}
@@ -181,7 +192,9 @@ func DiscoverTestSuite(root string) ([]models.AvailableExercise, error) {
 }
 
 // Run runs selected cases for each student.
-func Run(ctx context.Context, cfg Config, progress func(string)) ([]models.StudentReportData, error) {
+func Run(
+	ctx context.Context, cfg Config, progress func(string),
+) ([]models.StudentReportData, error) {
 	var reports []models.StudentReportData
 	err := RunWithCompleted(ctx, cfg, progress, func(report models.StudentReportData) error {
 		reports = append(reports, report)
@@ -193,9 +206,26 @@ func Run(ctx context.Context, cfg Config, progress func(string)) ([]models.Stude
 	return reports, nil
 }
 
+type preparedStudent struct {
+	path, name string
+	flags      []string
+}
+
+type runExecutor struct {
+	cfg            Config
+	progress       func(string)
+	work           models.RunProgress
+	runnerIdentity string
+}
+
 // RunWithCompleted calls completed synchronously as each student finishes. Returning
 // an error stops the run, allowing callers to persist each report before proceeding.
-func RunWithCompleted(ctx context.Context, cfg Config, progress func(string), completed func(models.StudentReportData) error) error {
+func RunWithCompleted(
+	ctx context.Context,
+	cfg Config,
+	progress func(string),
+	completed func(models.StudentReportData) error,
+) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -205,257 +235,319 @@ func RunWithCompleted(ctx context.Context, cfg Config, progress func(string), co
 	if len(cfg.Students) == 0 {
 		return errors.New("no students selected")
 	}
-	folders, err := DiscoverExercises(cfg.TestsFolder)
+	numbers, tests, err := prepareTests(cfg)
 	if err != nil {
 		return err
 	}
-	selected := cfg.Selection.Exercises
-	numbers := make([]int, 0, len(folders))
-	for n := range folders {
-		if len(selected) == 0 {
-			numbers = append(numbers, n)
-		} else if _, ok := selected[n]; ok {
-			numbers = append(numbers, n)
-		}
+	students, err := prepareStudents(ctx, cfg)
+	if err != nil {
+		return err
 	}
-	sort.Ints(numbers)
-	if len(numbers) == 0 {
-		return errors.New("no selected exercises found")
+	run := runExecutor{cfg: cfg, progress: progress}
+	if cfg.Incremental {
+		run.runnerIdentity = fingerprintRunner()
 	}
-	for n := range selected {
-		if _, ok := folders[n]; !ok {
-			return fmt.Errorf("exercise %d not found", n)
-		}
-	}
-	tests := map[int][]testCase{}
-	totalCases := 0
-	for _, n := range numbers {
-		cases, e := collectCases(folders[n])
-		if e != nil {
-			return e
-		}
-		wanted := selected[n]
-		if len(wanted) > 0 {
-			set := map[string]bool{}
-			for _, name := range wanted {
-				set[name] = true
-			}
-			filtered := cases[:0]
-			for _, tc := range cases {
-				if set[tc.name] {
-					filtered = append(filtered, tc)
-					delete(set, tc.name)
-				}
-			}
-			if len(set) > 0 {
-				return fmt.Errorf("some selected cases in exercise %d were not found", n)
-			}
-			cases = filtered
-		}
-		if len(selected) > 0 && len(cases) == 0 {
-			return fmt.Errorf("no test cases found in selected exercise %d", n)
-		}
-		tests[n] = cases
-		totalCases += len(cases)
-	}
-	if totalCases == 0 {
-		return errors.New("no test cases found in selected exercises")
-	}
-	type preparedStudent struct {
-		path, name string
-		flags      []string
-	}
-	seen := map[string]bool{}
-	students := make([]preparedStudent, 0, len(cfg.Students))
-	for _, student := range cfg.Students {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		path, err := filepath.Abs(student.Path)
-		if err != nil {
-			return err
-		}
-		info, err := os.Stat(path)
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("student %s is not a folder", path)
-		}
-		name := filepath.Base(path)
-		if seen[name] {
-			return fmt.Errorf("duplicate student folder name %q", name)
-		}
-		seen[name] = true
-		flags, err := EffectiveFlags(cfg.Build, student.Build)
-		if err != nil {
-			return fmt.Errorf("student %s: %w", name, err)
-		}
-		students = append(students, preparedStudent{path: path, name: name, flags: flags})
-	}
-	runnerIdentity := fingerprintRunner()
-	work := models.RunProgress{TotalStudents: len(students)}
+	run.work.TotalStudents = len(students)
 	for _, cases := range tests {
 		if len(cases) > 0 {
-			work.TotalUnits += (1 + len(cases)) * len(students)
+			run.work.TotalUnits += (1 + len(cases)) * len(students)
 		}
 	}
-	emit := func(activity string) {
-		work.Activity = activity
-		if cfg.OnProgress != nil {
-			cfg.OnProgress(work)
-		}
-	}
-	emit("Starting run")
+	run.emit("Starting run")
 	for _, student := range students {
-		if err := ctx.Err(); err != nil {
+		report, err := run.runStudent(ctx, student, numbers, tests)
+		if err != nil {
 			return err
 		}
-		path, name, flags := student.path, student.name, student.flags
-		report := models.StudentReportData{ID: name, StudentName: name, StudentPath: path, StartedAt: time.Now()}
-		for _, n := range numbers {
-			if len(tests[n]) == 0 {
-				continue
-			}
-			baseFingerprint := fingerprintExercise(ctx, path, n, flags, cfg.Timeout, runnerIdentity)
-			fingerprints := map[string]string{}
-			cached := map[string]models.TestCaseResult{}
-			for _, tc := range tests[n] {
-				fingerprints[tc.name] = fingerprintCase(baseFingerprint, tc)
-			}
-			if cfg.Incremental {
-				for _, oldGroup := range cfg.Cached[name].Groups {
-					if oldGroup.Exercise != n {
-						continue
-					}
-					for _, old := range oldGroup.Results {
-						if old.Passed && old.Fingerprint != "" && old.Fingerprint == fingerprints[old.InputFile] {
-							cached[old.InputFile] = old
-						}
-					}
-				}
-			}
-			activity := fmt.Sprintf("%s: compiling exercise %d", name, n)
-			if len(cached) == len(tests[n]) {
-				activity = fmt.Sprintf("%s: exercise %d cached", name, n)
-			}
-			emit(activity)
-			if progress != nil {
-				progress(activity)
-			}
-			var runner []string
-			var cleanup func()
-			var diagnostic, kind string
-			var usedFlags []string
-			if len(cached) < len(tests[n]) {
-				runner, cleanup, diagnostic, kind, usedFlags = compile(ctx, path, n, flags)
-			}
-			if err := ctx.Err(); err != nil {
-				if cleanup != nil {
-					cleanup()
-				}
-				return err
-			}
-			work.CompletedUnits++
-			emit(activity)
-			group := models.ExerciseGroup{Exercise: n}
-			for _, tc := range tests[n] {
-				if err := ctx.Err(); err != nil {
-					if cleanup != nil {
-						cleanup()
-					}
-					return err
-				}
-				activity = fmt.Sprintf("%s: exercise %d, %s", name, n, tc.name)
-				emit(activity)
-				if progress != nil {
-					progress(activity)
-				}
-				result := models.TestCaseResult{InputFile: tc.name, InputSize: tc.size, ExecutedAt: time.Now(), BuildFlags: append([]string(nil), usedFlags...)}
-				if previous, ok := cached[tc.name]; ok {
-					result = previous
-					result.Cached = true
-					work.CachedCases++
-				} else if kind != "" {
-					work.ExecutedCases++
-					result.FailureType = kind
-					result.Message = diagnostic
-				} else {
-					work.ExecutedCases++
-					execute(ctx, runner, tc, cfg.Timeout, &result)
-					if result.Passed {
-						result.Fingerprint = fingerprints[tc.name]
-					}
-				}
-				if result.Passed {
-					group.Passed++
-					report.Passed++
-				} else {
-					group.Failed++
-					report.Failed++
-					switch result.FailureType {
-					case "compilation_error":
-						report.CompileFails++
-					case "runtime_error":
-						report.RuntimeFails++
-					case "diff_error":
-						report.DiffFails++
-					}
-				}
-				report.Total++
-				if result.InputSize > 0 && result.Duration > 0 {
-					group.HasChartData = true
-				}
-				group.Results = append(group.Results, result)
-				if err := ctx.Err(); err != nil {
-					if cleanup != nil {
-						cleanup()
-					}
-					return err
-				}
-				work.CompletedUnits++
-				emit(activity)
-			}
-			if cleanup != nil {
-				cleanup()
-			}
-			// Only store fingerprints if source and test data stayed unchanged throughout execution.
-			after := fingerprintExercise(ctx, path, n, flags, cfg.Timeout, runnerIdentity)
-			for i := range group.Results {
-				result := &group.Results[i]
-				var tc testCase
-				for _, candidate := range tests[n] {
-					if candidate.name == result.InputFile {
-						tc = candidate
-						break
-					}
-				}
-				if after == "" || after != baseFingerprint || fingerprintCase(after, tc) != result.Fingerprint {
-					if result.Cached {
-						return fmt.Errorf("student %s exercise %d changed during execution; retry the run", name, n)
-					}
-					result.Fingerprint = ""
-				}
-			}
-			report.Groups = append(report.Groups, group)
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		report.FinishedAt = time.Now()
-		emit(fmt.Sprintf("%s: saving report", name))
+		run.emit(fmt.Sprintf("%s: saving report", student.name))
 		if completed != nil {
 			if err := completed(report); err != nil {
 				return err
 			}
 		}
-		work.CompletedStudents++
-		emit(fmt.Sprintf("%s: report available", name))
+		run.work.CompletedStudents++
+		run.emit(fmt.Sprintf("%s: report available", student.name))
 	}
 	return nil
 }
 
-func compile(ctx context.Context, dir string, n int, flags []string) ([]string, func(), string, string, []string) {
+func prepareTests(cfg Config) ([]int, map[int][]testCase, error) {
+	folders, err := DiscoverExercises(cfg.TestsFolder)
+	if err != nil {
+		return nil, nil, err
+	}
+	selected := cfg.Selection.Exercises
+	numbers := make([]int, 0, len(folders))
+	for n := range folders {
+		if _, ok := selected[n]; len(selected) == 0 || ok {
+			numbers = append(numbers, n)
+		}
+	}
+	sort.Ints(numbers)
+	if len(numbers) == 0 {
+		return nil, nil, errors.New("no selected exercises found")
+	}
+	for n := range selected {
+		if _, ok := folders[n]; !ok {
+			return nil, nil, fmt.Errorf("exercise %d not found", n)
+		}
+	}
+	tests := make(map[int][]testCase, len(numbers))
+	totalCases := 0
+	for _, n := range numbers {
+		cases, err := collectCases(folders[n])
+		if err != nil {
+			return nil, nil, err
+		}
+		cases, err = selectCases(cases, selected[n], n)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(selected) > 0 && len(cases) == 0 {
+			return nil, nil, fmt.Errorf("no test cases found in selected exercise %d", n)
+		}
+		tests[n] = cases
+		totalCases += len(cases)
+	}
+	if totalCases == 0 {
+		return nil, nil, errors.New("no test cases found in selected exercises")
+	}
+	return numbers, tests, nil
+}
+
+func selectCases(cases []testCase, wanted []string, exercise int) ([]testCase, error) {
+	if len(wanted) == 0 {
+		return cases, nil
+	}
+	set := make(map[string]bool, len(wanted))
+	for _, name := range wanted {
+		set[name] = true
+	}
+	filtered := cases[:0]
+	for _, tc := range cases {
+		if set[tc.name] {
+			filtered = append(filtered, tc)
+			delete(set, tc.name)
+		}
+	}
+	if len(set) > 0 {
+		return nil, fmt.Errorf("some selected cases in exercise %d were not found", exercise)
+	}
+	return filtered, nil
+}
+
+func prepareStudents(ctx context.Context, cfg Config) ([]preparedStudent, error) {
+	seen := map[string]bool{}
+	students := make([]preparedStudent, 0, len(cfg.Students))
+	for _, student := range cfg.Students {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		path, err := filepath.Abs(student.Path)
+		if err != nil {
+			return nil, err
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			return nil, err
+		}
+		if !info.IsDir() {
+			return nil, fmt.Errorf("student %s is not a folder", path)
+		}
+		name := filepath.Base(path)
+		if seen[name] {
+			return nil, fmt.Errorf("duplicate student folder name %q", name)
+		}
+		seen[name] = true
+		flags, err := EffectiveFlags(cfg.Build, student.Build)
+		if err != nil {
+			return nil, fmt.Errorf("student %s: %w", name, err)
+		}
+		students = append(students, preparedStudent{path: path, name: name, flags: flags})
+	}
+	return students, nil
+}
+
+func (r *runExecutor) emit(activity string) {
+	r.work.Activity = activity
+	if r.cfg.OnProgress != nil {
+		r.cfg.OnProgress(r.work)
+	}
+}
+
+func (r *runExecutor) announce(activity string) {
+	r.emit(activity)
+	if r.progress != nil {
+		r.progress(activity)
+	}
+}
+
+func (r *runExecutor) runStudent(
+	ctx context.Context,
+	student preparedStudent,
+	numbers []int,
+	tests map[int][]testCase,
+) (models.StudentReportData, error) {
+	report := models.StudentReportData{
+		ID: student.name, StudentName: student.name, StudentPath: student.path, StartedAt: time.Now(),
+	}
+	for _, n := range numbers {
+		if len(tests[n]) == 0 {
+			continue
+		}
+		group, err := r.runExercise(ctx, student, n, tests[n], &report)
+		if err != nil {
+			return report, err
+		}
+		report.Groups = append(report.Groups, group)
+	}
+	if err := ctx.Err(); err != nil {
+		return report, err
+	}
+	report.FinishedAt = time.Now()
+	return report, nil
+}
+
+func (r *runExecutor) cachedCases(
+	ctx context.Context, student preparedStudent, n int, cases []testCase,
+) (string, map[string]string, map[string]models.TestCaseResult) {
+	fingerprints := make(map[string]string, len(cases))
+	cached := map[string]models.TestCaseResult{}
+	if !r.cfg.Incremental {
+		return "", fingerprints, cached
+	}
+	base := fingerprintExercise(ctx, student.path, n, student.flags, r.cfg.Timeout, r.runnerIdentity)
+	for _, tc := range cases {
+		fingerprints[tc.name] = fingerprintCase(base, tc)
+	}
+	for _, group := range r.cfg.Cached[student.name].Groups {
+		if group.Exercise != n {
+			continue
+		}
+		for _, old := range group.Results {
+			if old.Passed && old.Fingerprint != "" && old.Fingerprint == fingerprints[old.InputFile] {
+				cached[old.InputFile] = old
+			}
+		}
+	}
+	return base, fingerprints, cached
+}
+
+func (r *runExecutor) runExercise(
+	ctx context.Context, student preparedStudent, n int, cases []testCase,
+	report *models.StudentReportData,
+) (models.ExerciseGroup, error) {
+	group := models.ExerciseGroup{Exercise: n}
+	if err := ctx.Err(); err != nil {
+		return group, err
+	}
+	base, fingerprints, cached := r.cachedCases(ctx, student, n, cases)
+	activity := fmt.Sprintf("%s: compiling exercise %d", student.name, n)
+	if len(cached) == len(cases) {
+		activity = fmt.Sprintf("%s: exercise %d cached", student.name, n)
+	}
+	r.announce(activity)
+	var runner []string
+	var cleanup func()
+	var diagnostic, kind string
+	var usedFlags []string
+	if len(cached) < len(cases) {
+		runner, cleanup, diagnostic, kind, usedFlags = compile(ctx, student.path, n, student.flags)
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+	if err := ctx.Err(); err != nil {
+		return group, err
+	}
+	r.work.CompletedUnits++
+	r.emit(activity)
+	for _, tc := range cases {
+		if err := ctx.Err(); err != nil {
+			return group, err
+		}
+		activity = fmt.Sprintf("%s: exercise %d, %s", student.name, n, tc.name)
+		r.announce(activity)
+		result := models.TestCaseResult{
+			InputFile: tc.name, InputSize: tc.size, ExecutedAt: time.Now(),
+			BuildFlags: append([]string(nil), usedFlags...),
+		}
+		if previous, ok := cached[tc.name]; ok {
+			result = previous
+			result.Cached = true
+			r.work.CachedCases++
+		} else if kind != "" {
+			r.work.ExecutedCases++
+			result.FailureType, result.Message = kind, diagnostic
+		} else {
+			r.work.ExecutedCases++
+			execute(ctx, runner, tc, r.cfg.Timeout, &result)
+			if result.Passed {
+				result.Fingerprint = fingerprints[tc.name]
+			}
+		}
+		addCaseResult(report, &group, result)
+		if err := ctx.Err(); err != nil {
+			return group, err
+		}
+		r.work.CompletedUnits++
+		r.emit(activity)
+	}
+	if r.cfg.Incremental {
+		if err := r.validateFingerprints(ctx, student, n, cases, base, &group); err != nil {
+			return group, err
+		}
+	}
+	return group, nil
+}
+
+func addCaseResult(
+	report *models.StudentReportData, group *models.ExerciseGroup, result models.TestCaseResult,
+) {
+	if result.Passed {
+		group.Passed++
+		report.Passed++
+	} else {
+		group.Failed++
+		report.Failed++
+		switch result.FailureType {
+		case "compilation_error":
+			report.CompileFails++
+		case "runtime_error":
+			report.RuntimeFails++
+		case "diff_error":
+			report.DiffFails++
+		}
+	}
+	report.Total++
+	if result.InputSize > 0 && result.Duration > 0 {
+		group.HasChartData = true
+	}
+	group.Results = append(group.Results, result)
+}
+
+func (r *runExecutor) validateFingerprints(
+	ctx context.Context, student preparedStudent, n int, cases []testCase,
+	base string, group *models.ExerciseGroup,
+) error {
+	after := fingerprintExercise(ctx, student.path, n, student.flags, r.cfg.Timeout, r.runnerIdentity)
+	for i := range group.Results {
+		result := &group.Results[i]
+		if after == "" || after != base || fingerprintCase(after, cases[i]) != result.Fingerprint {
+			if result.Cached {
+				return fmt.Errorf(
+					"student %s exercise %d changed during execution; retry the run", student.name, n,
+				)
+			}
+			result.Fingerprint = ""
+		}
+	}
+	return nil
+}
+
+func compile(
+	ctx context.Context, dir string, n int, flags []string,
+) ([]string, func(), string, string, []string) {
 	cpp := filepath.Join(dir, fmt.Sprintf("ejercicio%d.cpp", n))
 	java := filepath.Join(dir, fmt.Sprintf("Ejercicio%d.java", n))
 	source := cpp
@@ -464,7 +556,10 @@ func compile(ctx context.Context, dir string, n int, flags []string) ([]string, 
 		source = java
 		lang = "java"
 		if _, e = os.Stat(java); e != nil {
-			return nil, nil, fmt.Sprintf("missing source file: expected %s or %s", filepath.Base(java), filepath.Base(cpp)), "source_missing", nil
+			message := fmt.Sprintf(
+				"missing source file: expected %s or %s", filepath.Base(java), filepath.Base(cpp),
+			)
+			return nil, nil, message, "source_missing", nil
 		}
 	}
 	var usedFlags []string
@@ -500,7 +595,10 @@ func compile(ctx context.Context, dir string, n int, flags []string) ([]string, 
 	return runner, cleanup, "", "", usedFlags
 }
 
-func execute(parent context.Context, runner []string, tc testCase, timeout time.Duration, r *models.TestCaseResult) {
+func execute(
+	parent context.Context, runner []string, tc testCase, timeout time.Duration,
+	r *models.TestCaseResult,
+) {
 	input, e := os.Open(tc.input)
 	if e != nil {
 		r.FailureType = "runtime_error"

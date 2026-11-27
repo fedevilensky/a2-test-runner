@@ -4,6 +4,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -43,11 +44,12 @@ type Server struct {
 	closed    bool
 }
 type status struct {
-	Running   bool               `json:"running"`
-	Messages  []string           `json:"messages"`
-	Error     string             `json:"error,omitempty"`
-	Progress  models.RunProgress `json:"progress"`
-	StartedAt time.Time          `json:"started_at,omitempty"`
+	Running         bool               `json:"running"`
+	Messages        []string           `json:"messages"`
+	Error           string             `json:"error,omitempty"`
+	Progress        models.RunProgress `json:"progress"`
+	StartedAt       time.Time          `json:"started_at,omitempty"`
+	ResultsRevision string             `json:"results_revision"`
 }
 
 func New(cfg Config) (*Server, error) {
@@ -69,7 +71,12 @@ func New(cfg Config) (*Server, error) {
 	s.mux.HandleFunc("POST /api/run", s.run)
 	s.mux.HandleFunc("GET /reports", s.report)
 	s.mux.HandleFunc("GET /reports/{student}", s.report)
-	s.mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
+	s.mux.Handle("GET /static/",
+		http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
+	s.mux.HandleFunc("GET /page.css", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/css; charset=utf-8")
+		_, _ = io.WriteString(w, pageCSS)
+	})
 	s.mux.HandleFunc("GET /app.js", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 		_, _ = io.WriteString(w, appJS)
@@ -100,7 +107,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if origin := r.Header.Get("Origin"); origin != "" {
 		u, err := url.Parse(origin)
-		if err != nil || !strings.EqualFold(u.Host, r.Host) || (u.Scheme != "http" && u.Scheme != "https") {
+		if err != nil || !strings.EqualFold(u.Host, r.Host) ||
+			(u.Scheme != "http" && u.Scheme != "https") {
 			http.Error(w, "cross-origin request denied", http.StatusForbidden)
 			return
 		}
@@ -165,7 +173,8 @@ func (s *Server) pickFolder(w http.ResponseWriter, r *http.Request) {
 func pickNativeFolder(ctx context.Context, initial string) (string, error) {
 	args := []string{"--file-selection", "--directory", "--title=Select a folder"}
 	if initial != "" {
-		args = append(args, "--filename="+strings.TrimRight(initial, string(filepath.Separator))+string(filepath.Separator))
+		filename := strings.TrimRight(initial, string(filepath.Separator)) + string(filepath.Separator)
+		args = append(args, "--filename="+filename)
 	}
 	command := exec.CommandContext(ctx, "zenity", args...)
 	var stderr bytes.Buffer
@@ -176,7 +185,10 @@ func pickNativeFolder(ctx context.Context, initial string) (string, error) {
 		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 && stderr.Len() == 0 {
 			return "", nil
 		}
-		return "", fmt.Errorf("could not open the folder picker (install zenity and run in a desktop session): %w %s", err, strings.TrimSpace(stderr.String()))
+		return "", fmt.Errorf(
+			"could not open the folder picker (install zenity and run in a desktop session): %w %s",
+			err, strings.TrimSpace(stderr.String()),
+		)
 	}
 	return strings.TrimRight(string(output), "\r\n"), nil
 }
@@ -276,10 +288,42 @@ func (s *Server) report(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) getStatus(w http.ResponseWriter, r *http.Request) {
+// resultsRevision uses file metadata to detect published reports or database
+// changes without serializing every result on each progress poll.
+func (s *Server) resultsRevision() string {
+	h := sha256.New()
+	add := func(path string) {
+		info, err := os.Stat(path)
+		if err != nil {
+			_, _ = fmt.Fprintf(h, "%s:missing\n", path)
+			return
+		}
+		_, _ = fmt.Fprintf(h, "%s:%d:%d\n", path, info.Size(), info.ModTime().UnixNano())
+	}
+	db := filepath.Join(filepath.Dir(s.cfg.StaticDir), "data", "results.sqlite")
+	for _, path := range []string{
+		db, db + "-wal",
+		filepath.Join(s.cfg.StaticDir, "index.html"),
+		filepath.Join(s.cfg.StaticDir, "summary", "index.html"),
+	} {
+		add(path)
+	}
+	entries, _ := os.ReadDir(s.cfg.StaticDir)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			add(filepath.Join(s.cfg.StaticDir, entry.Name(), "report.html"))
+		}
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func (s *Server) getStatus(w http.ResponseWriter, _ *http.Request) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	jsonReply(w, s.status)
+	current := s.status
+	current.Messages = append([]string(nil), current.Messages...)
+	s.mu.Unlock()
+	current.ResultsRevision = s.resultsRevision()
+	jsonReply(w, current)
 }
 
 func (s *Server) run(w http.ResponseWriter, r *http.Request) {
@@ -358,7 +402,8 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 	for i, h := range files {
 		p := strings.ReplaceAll(paths[i], "\\", "/")
 		clean := filepath.Clean(filepath.FromSlash(p))
-		if p == "" || filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+		if p == "" || filepath.IsAbs(clean) || clean == ".." ||
+			strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
 			http.Error(w, "invalid upload path", 400)
 			return
 		}

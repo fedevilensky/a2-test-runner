@@ -23,19 +23,18 @@ func TestIncrementalCasesAndInvalidation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write := func(path, content string) {
-		t.Helper()
-		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	write(filepath.Join(student, "ejercicio1.cpp"), "#include \"value.h\"\n#include <iostream>\nint main(){std::cout << VALUE;}\n")
+	write := func(path, content string) { writeFingerprintFile(t, path, content) }
+	write(filepath.Join(student, "ejercicio1.cpp"),
+		"#include \"value.h\"\n#include <iostream>\nint main(){std::cout << VALUE;}\n")
 	write(filepath.Join(student, "value.h"), "#define VALUE 1\n")
 	for _, name := range []string{"1", "2"} {
 		write(filepath.Join(tests, name+".in.txt"), "")
 		write(filepath.Join(tests, name+".out.txt"), "1")
 	}
-	cfg := Config{TestsFolder: filepath.Dir(tests), Students: []models.StudentConfig{{Path: student}}}
+	cfg := Config{
+		TestsFolder: filepath.Dir(tests),
+		Students:    []models.StudentConfig{{Path: student}}, Incremental: true,
+	}
 	run := func() models.StudentReportData {
 		t.Helper()
 		reports, err := Run(context.Background(), cfg, nil)
@@ -48,7 +47,6 @@ func TestIncrementalCasesAndInvalidation(t *testing.T) {
 	if !first.Groups[0].Results[0].Passed || first.Groups[0].Results[0].Fingerprint == "" {
 		t.Fatalf("not cacheable: %+v", first)
 	}
-	cfg.Incremental = true
 	cfg.Cached = map[string]models.StudentReportData{"student": first}
 	second := run()
 	if !second.Groups[0].Results[0].Cached || !second.Groups[0].Results[1].Cached {
@@ -77,7 +75,9 @@ func TestIncrementalCasesAndInvalidation(t *testing.T) {
 	write(filepath.Join(tests, "1.in.txt"), "")
 	write(filepath.Join(tests, "2.out.txt"), "different")
 	third := run()
-	if !third.Groups[0].Results[0].Cached || third.Groups[0].Results[1].Cached || third.Groups[0].Results[1].Passed {
+	if !third.Groups[0].Results[0].Cached ||
+		third.Groups[0].Results[1].Cached ||
+		third.Groups[0].Results[1].Passed {
 		t.Fatalf("changed expected output: %+v", third.Groups[0].Results)
 	}
 	cfg.Cached["student"] = third
@@ -107,9 +107,15 @@ func TestIncrementalCasesAndInvalidation(t *testing.T) {
 	}
 	cfg.Incremental = true
 	write(filepath.Join(student, "value.h"), "#define VALUE 2\n")
-	fourth := run()
-	if fourth.Groups[0].Results[0].Cached {
+	if run().Groups[0].Results[0].Cached {
 		t.Fatal("header change must invalidate")
+	}
+}
+
+func writeFingerprintFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -122,24 +128,47 @@ func TestFingerprintDisablesUnknownDependencies(t *testing.T) {
 	if err := os.WriteFile(src, []byte("#include \"../external.h\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got := fingerprintExercise(context.Background(), dir, 1, []string{"-std=c++11"}, 1, "runner"); got != "" {
+	if got := fingerprintExercise(context.Background(),
+		dir,
+		1,
+		[]string{"-std=c++11"},
+		1,
+		"runner"); got != "" {
 		t.Fatal("external include was cacheable")
 	}
 	if err := os.WriteFile(src, []byte("int main(){}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got := fingerprintExercise(context.Background(), dir, 1, []string{"-std=c++11", "-I/tmp"}, 1, "runner"); got == "" {
+	if got := fingerprintExercise(context.Background(),
+		dir,
+		1,
+		[]string{
+			"-std=c++11",
+			"-I/tmp",
+		},
+		1,
+		"runner"); got == "" {
 		t.Fatal("unused include path should not disable caching")
 	}
 	t.Setenv("CPATH", "/tmp")
-	if got := fingerprintExercise(context.Background(), dir, 1, []string{"-std=c++11"}, 1, "runner"); got != "" {
+	if got := fingerprintExercise(context.Background(),
+		dir,
+		1,
+		[]string{"-std=c++11"},
+		1,
+		"runner"); got != "" {
 		t.Fatal("external include environment was cacheable")
 	}
 	t.Setenv("CPATH", "")
 	if err := os.Symlink(src, filepath.Join(dir, "link")); err != nil {
 		t.Fatal(err)
 	}
-	if got := fingerprintExercise(context.Background(), dir, 1, []string{"-std=c++11"}, 1, "runner"); got == "" {
+	if got := fingerprintExercise(context.Background(),
+		dir,
+		1,
+		[]string{"-std=c++11"},
+		1,
+		"runner"); got == "" {
 		t.Fatal("unrelated symlink should not disable caching")
 	}
 }
@@ -164,11 +193,18 @@ func TestIncrementalJava(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write(filepath.Join(student, "Ejercicio1.java"), "public class Ejercicio1 { public static void main(String[] args) { System.out.print(Helper.value()); } }")
+	write(filepath.Join(student,
+		"Ejercicio1.java"),
+		"public class Ejercicio1 { public static void main(String[] args) { "+
+			"System.out.print(Helper.value()); } }")
 	write(filepath.Join(student, "Helper.java"), "class Helper { static int value() { return 7; } }")
 	write(filepath.Join(tests, "1.in.txt"), "")
 	write(filepath.Join(tests, "1.out.txt"), "7")
-	cfg := Config{TestsFolder: filepath.Dir(tests), Students: []models.StudentConfig{{Path: student}}}
+	cfg := Config{
+		TestsFolder: filepath.Dir(tests),
+		Students:    []models.StudentConfig{{Path: student}},
+		Incremental: true,
+	}
 	run := func() models.StudentReportData {
 		t.Helper()
 		reports, err := Run(context.Background(), cfg, nil)
@@ -201,7 +237,10 @@ func TestRunnerIdentityInvalidatesFingerprint(t *testing.T) {
 		t.Skip("g++ unavailable")
 	}
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "ejercicio1.cpp"), []byte("int main(){}"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir,
+		"ejercicio1.cpp"),
+		[]byte("int main(){}"),
+		0o600); err != nil {
 		t.Fatal(err)
 	}
 	args := []string{"-std=c++11"}

@@ -8,7 +8,9 @@ import (
 )
 
 // BuildReportViews derives summaries and chart data from current stored cases.
-func BuildReportViews(stored []models.StudentReportData) ([]models.StudentReportData, models.SummaryReport) {
+func BuildReportViews(
+	stored []models.StudentReportData,
+) ([]models.StudentReportData, models.SummaryReport) {
 	views := append([]models.StudentReportData(nil), stored...)
 	sort.Slice(views, func(i, j int) bool { return views[i].StudentName < views[j].StudentName })
 	rows := map[int]*models.SummaryRow{}
@@ -83,13 +85,20 @@ func BuildReportViews(stored []models.StudentReportData) ([]models.StudentReport
 	for _, row := range rows {
 		summary.Rows = append(summary.Rows, *row)
 	}
-	sort.Slice(summary.Rows, func(i, j int) bool { return summary.Rows[i].Exercise < summary.Rows[j].Exercise })
+	sort.Slice(summary.Rows, func(i, j int) bool {
+		return summary.Rows[i].Exercise < summary.Rows[j].Exercise
+	})
 	return views, summary
 }
+
 func modelFit(f complexityFit) models.Fit {
-	result := models.Fit{Available: f.Available, Best: f.Best, Note: f.Note, Count: f.Count, Distinct: f.Distinct}
+	result := models.Fit{
+		Available: f.Available, Best: f.Best, Note: f.Note, Count: f.Count, Distinct: f.Distinct,
+	}
 	for _, candidate := range f.Candidates {
-		result.Candidates = append(result.Candidates, models.Candidate{Name: candidate.Name, RMSE: candidate.RMSE})
+		result.Candidates = append(result.Candidates, models.Candidate{
+			Name: candidate.Name, RMSE: candidate.RMSE,
+		})
 	}
 	return result
 }

@@ -41,14 +41,36 @@ func TestFitSparseRepeatedAndFailingCases(t *testing.T) {
 	if !fit.Available || fit.Distinct != 1 || !strings.Contains(fit.Note, "Low confidence") {
 		t.Fatalf("bad sparse fit: %+v", fit)
 	}
-	results := []models.TestCaseResult{{InputSize: 10, Duration: 1500 * time.Microsecond, Passed: true}, {InputSize: 20, Duration: 3 * time.Millisecond, Passed: false}, {InputSize: 30, Duration: 0}, {InputSize: 0, Duration: time.Second}}
+	results := []models.TestCaseResult{
+		{
+			InputSize: 10,
+			Duration:  1500 * time.Microsecond,
+			Passed:    true,
+		},
+		{
+			InputSize: 20,
+			Duration:  3 * time.Millisecond,
+			Passed:    false,
+		},
+		{
+			InputSize: 30,
+			Duration:  0,
+		},
+		{
+			InputSize: 0,
+			Duration:  time.Second,
+		},
+	}
 	all, passing := timingPoints(results, false), timingPoints(results, true)
 	if len(all) != 2 || len(passing) != 1 || passing[0].Y != 1.5 {
 		t.Fatalf("wrong filtered points: %+v %+v", all, passing)
 	}
 	g := models.ExerciseGroup{Results: results}
 	var cfg map[string]any
-	if err := json.Unmarshal([]byte(complexityChartConfig(g, fitComplexity(all), fitComplexity(passing))), &cfg); err != nil {
+	if err := json.Unmarshal([]byte(complexityChartConfig(g,
+		fitComplexity(all),
+		fitComplexity(passing))),
+		&cfg); err != nil {
 		t.Fatal(err)
 	}
 	sets := cfg["data"].(map[string]any)["datasets"].([]any)

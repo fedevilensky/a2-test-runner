@@ -314,9 +314,15 @@ const indexStatic1 = `<style>
     </style>`
 const indexStatic2 = `<script>
       var _cc={};
-      document.querySelectorAll("canvas[data-chart]").forEach(function(c){_cc[c.id]=JSON.parse(c.dataset.chart);});
+      document.querySelectorAll("canvas[data-chart]").forEach(function(c){
+        _cc[c.id]=JSON.parse(c.dataset.chart);
+      });
       var _ci={};
-      function _ic(el){el.querySelectorAll('canvas').forEach(function(c){if(!_ci[c.id]&&_cc[c.id]){_ci[c.id]=new Chart(c,_cc[c.id]);}});}
+      function _ic(el){
+        el.querySelectorAll('canvas').forEach(function(c){
+          if(!_ci[c.id]&&_cc[c.id]){_ci[c.id]=new Chart(c,_cc[c.id]);}
+        });
+      }
       function nav(id,el){
         document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
         document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});
@@ -349,14 +355,19 @@ const indexStatic2 = `<script>
           });
         });
       }());
-      function toggleExercise(button){var expanded=button.getAttribute("aria-expanded")==="true";button.setAttribute("aria-expanded",String(!expanded));button.closest(".exercise-card").querySelector(".table-scroll").hidden=expanded;}
+      function toggleExercise(button){
+        var expanded=button.getAttribute("aria-expanded")==="true";
+        button.setAttribute("aria-expanded",String(!expanded));
+        button.closest(".exercise-card").querySelector(".table-scroll").hidden=expanded;
+      }
       function toggleTheme(){
         var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
         document.documentElement.setAttribute('data-theme',n);
         try{localStorage.setItem('theme',n);}catch(e){}
         document.getElementById('theme-toggle').textContent=n==='dark'?'☀️':'🌙';
       }
-      document.getElementById('theme-toggle').textContent=document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙';
+      document.getElementById('theme-toggle').textContent=
+        document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙';
       (function(){
         var h=location.hash.slice(1)||'summary';
         nav(h,document.querySelector('[href="#'+h+'"]'));
@@ -420,7 +431,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL("#" + student.ID)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 388, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 399, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 			if templ_7745c5c3_Err != nil {
@@ -433,7 +444,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(student.StudentName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 390, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 401, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -464,7 +475,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.NewAttributeExpression(student.ID).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 402, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 413, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
@@ -477,7 +488,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(student.StudentName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 403, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 414, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -490,7 +501,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(student.StudentPath)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 405, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 416, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -503,7 +514,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(student.StartedAt.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 406, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 417, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -516,7 +527,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(student.FinishedAt.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 407, Col: 68}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 418, Col: 68}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -529,7 +540,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(student.Total)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 409, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 420, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -542,7 +553,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(student.Passed)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 411, Col: 50}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 422, Col: 50}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -555,7 +566,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(percent(student.Passed, student.Total))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 411, Col: 94}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 422, Col: 94}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -568,7 +579,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(student.Failed)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 414, Col: 50}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 425, Col: 50}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -581,7 +592,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(percent(student.Failed, student.Total))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 414, Col: 94}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 425, Col: 94}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
@@ -594,7 +605,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(student.CompileFails)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 418, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 429, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -607,7 +618,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(student.RuntimeFails)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 418, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 429, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -620,7 +631,7 @@ func IndexReport(data models.SPAData) templ.Component {
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(student.DiffFails)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 418, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/index_report.templ`, Line: 429, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {

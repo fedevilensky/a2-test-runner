@@ -16,7 +16,9 @@ var diffHunkHeader = regexp.MustCompile(`^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@
 
 // diffOutputLines maps unified diff hunks back to the complete original outputs.
 // When a diff cannot be parsed, callers can still show the original text.
-func diffOutputLines(expected, actual, diff string) ([]models.OutputLine, []models.OutputLine, bool) {
+func diffOutputLines(
+	expected, actual, diff string,
+) ([]models.OutputLine, []models.OutputLine, bool) {
 	makeLines := func(s string) []models.OutputLine {
 		if s == "" {
 			return nil
@@ -100,5 +102,7 @@ func EnrichDiff(item *models.TestCaseResult) {
 	if item.FailureType != "diff_error" || (item.Expected == "" && item.Actual == "") {
 		return
 	}
-	item.ExpectedLines, item.ActualLines, item.HasDiffLines = diffOutputLines(item.Expected, item.Actual, unifiedDiff(item.Expected, item.Actual))
+	item.ExpectedLines, item.ActualLines, item.HasDiffLines = diffOutputLines(
+		item.Expected, item.Actual, unifiedDiff(item.Expected, item.Actual),
+	)
 }

@@ -17,15 +17,16 @@ func TestJavaDependencies(t *testing.T) {
 	write := func(name, data string) {
 		t.Helper()
 		path := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+		if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
 	write("Ejercicio1.java", "import pkg.Helper; class Ejercicio1 { int value = Helper.value(); }")
-	write("pkg/Helper.java", "package pkg; public class Helper { public static int value() { return Other.value(); } }")
+	write("pkg/Helper.java", "package pkg; public class Helper { "+
+		"public static int value() { return Other.value(); } }")
 	write("pkg/Other.java", "package pkg; class Other { static int value() { return 1; } }")
 	write("Unrelated.java", "class Unrelated {}")
 	source := filepath.Join(dir, "Ejercicio1.java")
@@ -33,7 +34,9 @@ func TestJavaDependencies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{source, filepath.Join(dir, "pkg/Helper.java"), filepath.Join(dir, "pkg/Other.java")}
+	want := []string{
+		source, filepath.Join(dir, "pkg/Helper.java"), filepath.Join(dir, "pkg/Other.java"),
+	}
 	if !reflect.DeepEqual(deps, want) {
 		t.Fatalf("dependencies = %v, want %v", deps, want)
 	}
@@ -42,8 +45,10 @@ func TestJavaDependencies(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(after, want) {
 		t.Fatalf("after unrelated change: %v, %v", after, err)
 	}
-	write("pkg/Other.java", "package pkg; class Other { static int value() { return NewDependency.value(); } }")
-	write("pkg/NewDependency.java", "package pkg; class NewDependency { static int value() { return 2; } }")
+	write("pkg/Other.java", "package pkg; class Other { "+
+		"static int value() { return NewDependency.value(); } }")
+	write("pkg/NewDependency.java", "package pkg; class NewDependency { "+
+		"static int value() { return 2; } }")
 	after, err = javaDependencies(context.Background(), dir, source)
 	if err != nil || len(after) != 4 || after[2] != filepath.Join(dir, "pkg/NewDependency.java") {
 		t.Fatalf("after dependency added: %v, %v", after, err)
@@ -56,11 +61,11 @@ func TestJavaDependenciesRejectSymlink(t *testing.T) {
 	}
 	dir := t.TempDir()
 	source := filepath.Join(dir, "Ejercicio1.java")
-	if err := os.WriteFile(source, []byte("class Ejercicio1 { Helper h; }"), 0600); err != nil {
+	if err := os.WriteFile(source, []byte("class Ejercicio1 { Helper h; }"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	external := filepath.Join(t.TempDir(), "Helper.java")
-	if err := os.WriteFile(external, []byte("class Helper {}"), 0600); err != nil {
+	if err := os.WriteFile(external, []byte("class Helper {}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(external, filepath.Join(dir, "Helper.java")); err != nil {
@@ -79,7 +84,7 @@ func TestJavaDependenciesDetectsNewShadowAndClasses(t *testing.T) {
 	source := filepath.Join(dir, "Ejercicio1.java")
 	write := func(name, contents string) {
 		t.Helper()
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(contents), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(contents), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}

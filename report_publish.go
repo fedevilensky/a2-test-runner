@@ -14,7 +14,9 @@ import (
 	"github.com/fedevilensky/a2-test-runner/templates"
 )
 
-func reportViews(stored []models.StudentReportData) ([]models.StudentReportData, models.SummaryReport) {
+func reportViews(
+	stored []models.StudentReportData,
+) ([]models.StudentReportData, models.SummaryReport) {
 	views, summary := service.BuildReportViews(stored)
 	for i := range views {
 		view := &views[i]
@@ -33,7 +35,9 @@ func reportViews(stored []models.StudentReportData) ([]models.StudentReportData,
 	return views, summary
 }
 
-func reportComponent(stored []models.StudentReportData, studentName string) (templ.Component, error) {
+func reportComponent(
+	stored []models.StudentReportData, studentName string,
+) (templ.Component, error) {
 	views, summary := reportViews(stored)
 	if studentName == "" {
 		return templates.IndexReport(models.SPAData{Students: views, Summary: summary}), nil
@@ -54,26 +58,57 @@ func reportComponent(stored []models.StudentReportData, studentName string) (tem
 	return nil, fmt.Errorf("student %q: %w", studentName, os.ErrNotExist)
 }
 
-func publishReports(ctx context.Context, staticDir string, stored []models.StudentReportData) error {
+func publishReports(
+	ctx context.Context, staticDir string, stored []models.StudentReportData,
+) error {
+	return publishUpdatedReports(ctx, staticDir, stored, "")
+}
+
+// publishUpdatedReports updates the student's report and its navigation neighbors.
+// Empty updatedName rebuilds every report, including on server startup.
+func publishUpdatedReports(
+	ctx context.Context,
+	staticDir string,
+	stored []models.StudentReportData,
+	updatedName string,
+) error {
 	views, summary := reportViews(stored)
 	if err := os.MkdirAll(staticDir, 0o755); err != nil {
 		return err
 	}
 	seen := make(map[string]string)
-	for _, view := range views {
+	for i, view := range views {
 		id := sanitizeName(view.StudentName)
 		if other, ok := seen[id]; ok && other != view.StudentName {
-			return fmt.Errorf("student names %q and %q produce the same report path", other, view.StudentName)
+			return fmt.Errorf(
+				"student names %q and %q produce the same report path", other, view.StudentName,
+			)
 		}
 		seen[id] = view.StudentName
-		if err := writeReportAtomic(ctx, filepath.Join(staticDir, id, "report.html"), templates.StudentReportPage(view)); err != nil {
+		path := filepath.Join(staticDir, id, "report.html")
+		needsUpdate := updatedName == "" || view.StudentName == updatedName ||
+			view.PrevName == updatedName || view.NextName == updatedName
+		if !needsUpdate {
+			_, err := os.Stat(path)
+			needsUpdate = errors.Is(err, os.ErrNotExist)
+			if err != nil && !needsUpdate {
+				return err
+			}
+		}
+		if !needsUpdate {
+			continue
+		}
+		if err := writeReportAtomic(ctx, path, templates.StudentReportPage(views[i])); err != nil {
 			return err
 		}
 	}
-	if err := writeReportAtomic(ctx, filepath.Join(staticDir, "summary", "index.html"), templates.SummaryReportPage(summary)); err != nil {
+	if err := writeReportAtomic(
+		ctx, filepath.Join(staticDir, "summary", "index.html"), templates.SummaryReportPage(summary),
+	); err != nil {
 		return err
 	}
-	return writeReportAtomic(ctx, filepath.Join(staticDir, "index.html"), templates.IndexReport(models.SPAData{Students: views, Summary: summary}))
+	index := templates.IndexReport(models.SPAData{Students: views, Summary: summary})
+	return writeReportAtomic(ctx, filepath.Join(staticDir, "index.html"), index)
 }
 
 func writeReportAtomic(ctx context.Context, path string, component templ.Component) (err error) {

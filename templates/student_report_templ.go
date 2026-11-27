@@ -212,7 +212,9 @@ const studentStatic1 = `<style>
       }
     </style>`
 const studentStatic2 = `<script>
-      document.querySelectorAll("canvas[data-chart]").forEach(function(c){new Chart(c, JSON.parse(c.dataset.chart));});
+      document.querySelectorAll("canvas[data-chart]").forEach(function(c){
+        new Chart(c, JSON.parse(c.dataset.chart));
+      });
       (function syncComparisonScroll() {
         var programmatic = new WeakMap();
         document.querySelectorAll("tr").forEach(function (row) {
@@ -289,7 +291,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(data.StudentName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 265, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 267, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -314,7 +316,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(data.IndexPath)).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 282, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 284, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -332,7 +334,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(data.PrevPath)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 284, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 286, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
@@ -345,7 +347,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(data.PrevName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 284, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 286, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -368,7 +370,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(data.NextPath)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 288, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 290, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -381,7 +383,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(data.NextName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 288, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 290, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -399,7 +401,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(data.SummaryPath)).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 290, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 292, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 		if templ_7745c5c3_Err != nil {
@@ -420,7 +422,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(data.StudentName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 293, Col: 41}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 295, Col: 41}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -433,7 +435,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(data.StudentPath)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 295, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 297, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -446,7 +448,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(data.StartedAt.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 296, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 298, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -459,7 +461,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(data.FinishedAt.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 297, Col: 62}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 299, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -472,7 +474,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(data.Total)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 299, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 301, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -485,7 +487,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(data.Passed)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 301, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 303, Col: 44}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -498,7 +500,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(percent(data.Passed, data.Total))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 301, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 303, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -511,7 +513,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(data.Failed)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 304, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 306, Col: 44}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -524,7 +526,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(percent(data.Failed, data.Total))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 304, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 306, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -537,7 +539,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var18 string
 		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(data.CompileFails)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 307, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 309, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {
@@ -550,7 +552,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(data.RuntimeFails)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 308, Col: 25}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 310, Col: 25}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -563,7 +565,7 @@ func StudentReportPage(data models.StudentReportData) templ.Component {
 		var templ_7745c5c3_Var20 string
 		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(data.DiffFails)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 308, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/student_report.templ`, Line: 310, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 		if templ_7745c5c3_Err != nil {

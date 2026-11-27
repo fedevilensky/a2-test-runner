@@ -37,7 +37,8 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "test-runner"
 	app.Usage = "Run programming exercise tests and generate HTML reports"
-	app.Description = `Without a command, run tests once using the options below and print progress and summaries in the terminal.
+	app.Description = `Without a command, run tests once using the options below and print progress and
+summaries in the terminal.
 Use "serve" to configure and run tests interactively in a local browser, and browse saved reports.
 Both modes share SQLite results and static HTML reports in the selected output directory.
 Run "test-runner serve --help" for server options.`
@@ -64,7 +65,9 @@ Run "test-runner serve --help" for server options.`
 			Usage: "Per-test execution timeout in seconds",
 			Value: 30,
 		},
-		cli.StringFlag{Name: "output-dir, o", Usage: "Directory for reports and result data", Value: "test-results"},
+		cli.StringFlag{
+			Name: "output-dir, o", Usage: "Directory for reports and result data", Value: "test-results",
+		},
 		cli.StringFlag{Name: "cpp-standard", Usage: "C++ standard (default c++11)"},
 		cli.StringFlag{Name: "optimization", Usage: "C++ optimization level, e.g. O0, O2, O3, Os"},
 		cli.StringSliceFlag{Name: "compiler-flag", Usage: "Additional compiler argument (repeatable)"},
@@ -72,13 +75,22 @@ Run "test-runner serve --help" for server options.`
 		cli.BoolFlag{Name: "force", Usage: "Run every selected test, even with --incremental"},
 	}
 
-	app.Commands = []cli.Command{{Name: "serve", Usage: "Start the local web interface", Description: `Start a local browser interface for configuring runs, selecting exercises or individual cases,
-viewing live progress, and browsing saved reports. Choose tests, students, timeout, and build
-settings in the interface; the one-shot CLI run options do not configure server runs.
-Results and static reports use the same output directory as the CLI.`, Flags: []cli.Flag{
-		cli.IntFlag{Name: "listen", Value: 8080, Usage: "Loopback port"},
-		cli.StringFlag{Name: "output-dir, o", Value: "test-results", Usage: "Directory for reports and result data"},
-	}, Action: func(c *cli.Context) error { return serveApplication(c.String("output-dir"), c.Int("listen")) }}}
+	app.Commands = []cli.Command{{
+		Name: "serve", Usage: "Start the local web interface",
+		Description: `Start a local browser interface for configuring runs, selecting exercises or
+individual cases, viewing live progress, and browsing saved reports. Choose tests, students,
+timeout, and build settings in the interface; CLI run options do not configure server runs.
+Results and static reports use the same output directory as the CLI.`,
+		Flags: []cli.Flag{
+			cli.IntFlag{Name: "listen", Value: 8080, Usage: "Loopback port"},
+			cli.StringFlag{
+				Name: "output-dir, o", Value: "test-results", Usage: "Directory for reports and result data",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			return serveApplication(c.String("output-dir"), c.Int("listen"))
+		},
+	}}
 
 	app.Action = func(c *cli.Context) error {
 		cfg, err := parseConfig(c)
@@ -112,8 +124,11 @@ func parseConfig(c *cli.Context) (config, error) {
 		return cfg, errors.New("--tests-folder/-t is required")
 	}
 
-	if strings.TrimSpace(cfg.studentFolderPattern) == "" && strings.TrimSpace(cfg.studentFolder) == "" {
-		return cfg, errors.New("--student-folder/-s is required when --student-folder-pattern/-p is not provided")
+	if strings.TrimSpace(cfg.studentFolderPattern) == "" &&
+		strings.TrimSpace(cfg.studentFolder) == "" {
+		return cfg, errors.New(
+			"--student-folder/-s is required when --student-folder-pattern/-p is not provided",
+		)
 	}
 
 	absTests, err := filepath.Abs(cfg.testsFolder)
@@ -156,15 +171,34 @@ func run(cfg config) error {
 	}
 	defer func() { _ = app.results.Close() }()
 	runCfg := service.Config{
-		TestsFolder: cfg.testsFolder, Students: students, Timeout: cfg.timeout, Selection: selection, Incremental: cfg.incremental,
-		Build: models.BuildSettings{Standard: cfg.cppStandard, Optimization: cfg.optimization, Extra: cfg.compilerFlags},
+		TestsFolder: cfg.testsFolder, Students: students, Timeout: cfg.timeout,
+		Selection: selection, Incremental: cfg.incremental,
+		Build: models.BuildSettings{
+			Standard: cfg.cppStandard, Optimization: cfg.optimization, Extra: cfg.compilerFlags,
+		},
 	}
-	if err := app.execute(context.Background(), runCfg, func(message string) { fmt.Fprintln(os.Stderr, message) }); err != nil {
+	var progress *runProgress
+	runCfg.OnProgress = func(state models.RunProgress) {
+		if progress == nil {
+			progress = newRunProgress(os.Stderr, state.TotalUnits, state.TotalStudents)
+			progress.start(state.Activity)
+		}
+		progress.update(state)
+	}
+	defer func() {
+		if progress != nil {
+			progress.close()
+		}
+	}()
+	var reports []models.StudentReportData
+	onCompleted := func(report models.StudentReportData) {
+		reports = append(reports, report)
+	}
+	if err := app.executeWithResults(context.Background(), runCfg, nil, onCompleted); err != nil {
 		return err
 	}
-	reports, err := app.results.List(context.Background())
-	if err != nil {
-		return err
+	if progress != nil {
+		progress.close()
 	}
 	views, summary := service.BuildReportViews(reports)
 	printConsoleSummary(views, summary, app.staticDir)

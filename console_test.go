@@ -31,7 +31,12 @@ func TestProgressCountsSkippedTests(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(data)
-	if !strings.Contains(text, "[0/3]") || !strings.Contains(text, "skipping 2 tests") || !strings.Contains(text, "Students 1/2 (1 pending)") || !strings.Contains(text, "Students 2/2 (0 pending)") || strings.Contains(text, "\x1b") {
+	if !strings.Contains(text,
+		"[0/3]") || !strings.Contains(text,
+		"skipping 2 tests") || !strings.Contains(text,
+		"Students 1/2 (1 pending)") || !strings.Contains(text,
+		"Students 2/2 (0 pending)") || strings.Contains(text,
+		"\x1b") {
 		t.Fatalf("unexpected redirected output: %q", text)
 	}
 }

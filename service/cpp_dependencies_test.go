@@ -20,7 +20,8 @@ func TestCPPDependencies(t *testing.T) {
 		t.Fatal(err)
 	}
 	files := map[string]string{
-		filepath.Join(dir, "ejercicio1.cpp"): "#include \"first header.h\"\nint main() {return answer;}\n",
+		filepath.Join(dir, "ejercicio1.cpp"): "#include \"first header.h\"\n" +
+			"int main() {return answer;}\n",
 		filepath.Join(dir, "first header.h"): "#include \"../shared.h\"\n",
 		filepath.Join(root, "shared.h"):      "const int answer = 0;\n",
 		filepath.Join(dir, "unrelated.h"):    "// unused\n",
@@ -30,11 +31,16 @@ func TestCPPDependencies(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	got, err := cppDependencies(context.Background(), dir, filepath.Join(dir, "ejercicio1.cpp"), []string{"-std=c++11"})
+	got, err := cppDependencies(
+		context.Background(), dir, filepath.Join(dir, "ejercicio1.cpp"), []string{"-std=c++11"},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{filepath.Join(dir, "ejercicio1.cpp"), filepath.Join(dir, "first header.h"), filepath.Join(root, "shared.h")}
+	want := []string{
+		filepath.Join(dir, "ejercicio1.cpp"), filepath.Join(dir, "first header.h"),
+		filepath.Join(root, "shared.h"),
+	}
 	sort.Strings(want)
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("dependencies = %v, want %v", got, want)
@@ -62,7 +68,9 @@ func TestCPPDependenciesRejectSymlinks(t *testing.T) {
 }
 
 func TestParseMakeDependencies(t *testing.T) {
-	got, err := parseMakeDependencies("a2_dependencies: /tmp/a\\ b /tmp/\\#hash /tmp/$$dollar \\\n /tmp/other\n")
+	got, err := parseMakeDependencies(
+		"a2_dependencies: /tmp/a\\ b /tmp/\\#hash /tmp/$$dollar \\\n /tmp/other\n",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

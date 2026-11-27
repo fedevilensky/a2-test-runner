@@ -88,6 +88,18 @@ func (p *runProgress) start(activity string) {
 	p.render()
 }
 
+func (p *runProgress) update(state models.RunProgress) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	changedStudent := p.studentsDone != state.CompletedStudents
+	p.total, p.done = state.TotalUnits, state.CompletedUnits
+	p.studentsTotal, p.studentsDone = state.TotalStudents, state.CompletedStudents
+	p.activity = safeConsoleText(state.Activity)
+	if p.terminal || changedStudent {
+		p.render()
+	}
+}
+
 func (p *runProgress) advance(n int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -162,7 +174,9 @@ func (p *runProgress) close() {
 	})
 }
 
-func printConsoleSummary(allReports []models.StudentReportData, summary models.SummaryReport, reportDir string) {
+func printConsoleSummary(
+	allReports []models.StudentReportData, summary models.SummaryReport, reportDir string,
+) {
 	header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("75")).Padding(0, 1)
 	cell := lipgloss.NewStyle().Padding(0, 1)
 	style := func(row, _ int) lipgloss.Style {
@@ -184,7 +198,10 @@ func printConsoleSummary(allReports []models.StudentReportData, summary models.S
 		)
 	}
 	exercises := table.New().
-		Headers("Exercise", "Students", "All pass", "Partial", "All fail", "Compile fail", "Not submitted").StyleFunc(style)
+		Headers(
+			"Exercise", "Students", "All pass", "Partial", "All fail", "Compile fail", "Not submitted",
+		).
+		StyleFunc(style)
 	for _, row := range summary.Rows {
 		exercises.Row(
 			fmt.Sprint(row.Exercise),

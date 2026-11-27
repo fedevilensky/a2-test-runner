@@ -203,7 +203,9 @@ const studentStatic1 = `<style>
       }
     </style>`
 const studentStatic2 = `<script>
-      document.querySelectorAll("canvas[data-chart]").forEach(function(c){new Chart(c, JSON.parse(c.dataset.chart));});
+      document.querySelectorAll("canvas[data-chart]").forEach(function(c){
+        new Chart(c, JSON.parse(c.dataset.chart));
+      });
       (function syncComparisonScroll() {
         var programmatic = new WeakMap();
         document.querySelectorAll("tr").forEach(function (row) {

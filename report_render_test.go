@@ -15,9 +15,30 @@ import (
 )
 
 func TestReportComponents(t *testing.T) {
-	result := models.TestCaseResult{InputFile: "<case>", InputSize: 10, Duration: time.Second, Expected: "<expected>", Actual: "<actual>", HasDiffLines: true, ExpectedLines: []models.OutputLine{{Text: "<expected>", Changed: true}}, ActualLines: []models.OutputLine{{Text: "<actual>", Changed: true}}}
-	group := models.ExerciseGroup{Exercise: 3, Results: []models.TestCaseResult{result}, Failed: 1, HasChartData: true}
-	student := models.StudentReportData{StudentName: `A "<script>`, Total: 1, Failed: 1, Groups: []models.ExerciseGroup{group}, IndexPath: "../index.html", SummaryPath: "../summary/index.html"}
+	result := models.TestCaseResult{
+		InputFile:     "<case>",
+		InputSize:     10,
+		Duration:      time.Second,
+		Expected:      "<expected>",
+		Actual:        "<actual>",
+		HasDiffLines:  true,
+		ExpectedLines: []models.OutputLine{{Text: "<expected>", Changed: true}},
+		ActualLines:   []models.OutputLine{{Text: "<actual>", Changed: true}},
+	}
+	group := models.ExerciseGroup{
+		Exercise:     3,
+		Results:      []models.TestCaseResult{result},
+		Failed:       1,
+		HasChartData: true,
+	}
+	student := models.StudentReportData{
+		StudentName: `A "<script>`,
+		Total:       1,
+		Failed:      1,
+		Groups:      []models.ExerciseGroup{group},
+		IndexPath:   "../index.html",
+		SummaryPath: "../summary/index.html",
+	}
 	views, _ := service.BuildReportViews([]models.StudentReportData{student})
 	student = views[0]
 	summary := models.SummaryReport{Rows: []models.SummaryRow{{Exercise: 3, Total: 1, AllFail: 1}}}
@@ -30,7 +51,9 @@ func TestReportComponents(t *testing.T) {
 			return templates.StudentReportPage(student).Render(context.Background(), b)
 		}, true},
 		{"index", func(b *bytes.Buffer) error {
-			return templates.IndexReport(models.SPAData{Students: []models.StudentReportData{student}, Summary: summary}).Render(context.Background(), b)
+			return templates.IndexReport(models.SPAData{
+				Students: []models.StudentReportData{student}, Summary: summary,
+			}).Render(context.Background(), b)
 		}, true},
 		{"summary", func(b *bytes.Buffer) error {
 			return templates.SummaryReportPage(summary).Render(context.Background(), b)
@@ -49,7 +72,8 @@ func TestReportComponents(t *testing.T) {
 			foundChart, foundDiff := false, false
 			var walk func(*html.Node)
 			walk = func(n *html.Node) {
-				if n.Type == html.TextNode && n.Parent != nil && n.Parent.Data != "script" && n.Parent.Data != "style" {
+				if n.Type == html.TextNode && n.Parent != nil &&
+					n.Parent.Data != "script" && n.Parent.Data != "style" {
 					content.WriteString(n.Data)
 				}
 				if n.Type == html.ElementNode {
@@ -78,8 +102,10 @@ func TestReportComponents(t *testing.T) {
 				}
 			}
 			walk(doc)
-			if tc.chart && (!strings.Contains(content.String(), "<expected>") || !strings.Contains(content.String(), "<actual>") || !foundChart || !foundDiff) {
-				t.Fatalf("missing escaped output, diff, or chart: chart=%v diff=%v text=%q", foundChart, foundDiff, content.String())
+			if tc.chart && (!strings.Contains(content.String(), "<expected>") ||
+				!strings.Contains(content.String(), "<actual>") || !foundChart || !foundDiff) {
+				t.Fatalf("missing escaped output, diff, or chart: chart=%v diff=%v text=%q",
+					foundChart, foundDiff, content.String())
 			}
 			if !strings.Contains(content.String(), "Summary") {
 				t.Error("missing summary navigation or heading")

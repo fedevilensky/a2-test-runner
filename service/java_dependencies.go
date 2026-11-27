@@ -31,7 +31,9 @@ func javaDependencies(ctx context.Context, dir, source string) ([]string, error)
 		return nil, err
 	}
 	defer func() { _ = os.RemoveAll(outDir) }()
-	cmd := exec.CommandContext(ctx, "javac", "-J-Duser.language=en", "-J-Duser.country=US", "-verbose", "-d", outDir, source)
+	cmd := exec.CommandContext(
+		ctx, "javac", "-J-Duser.language=en", "-J-Duser.country=US", "-verbose", "-d", outDir, source,
+	)
 	cmd.Dir = root
 	output, err := cmd.CombinedOutput()
 	if err != nil {

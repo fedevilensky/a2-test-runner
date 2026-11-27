@@ -41,7 +41,18 @@ func openApplication(root string) (*application, error) {
 	return &application{results: db, staticDir: filepath.Join(root, "static")}, nil
 }
 
-func (a *application) execute(ctx context.Context, cfg service.Config, progress func(string)) error {
+func (a *application) execute(
+	ctx context.Context, cfg service.Config, progress func(string),
+) error {
+	return a.executeWithResults(ctx, cfg, progress, nil)
+}
+
+func (a *application) executeWithResults(
+	ctx context.Context,
+	cfg service.Config,
+	progress func(string),
+	completed func(models.StudentReportData),
+) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	// Reject static-path collisions before changing existing results.
@@ -92,11 +103,14 @@ func (a *application) execute(ctx context.Context, cfg service.Config, progress 
 		if err != nil {
 			return err
 		}
-		if err := publishReports(ctx, a.staticDir, stored); err != nil {
+		if err := publishUpdatedReports(ctx, a.staticDir, stored, report.StudentName); err != nil {
 			return fmt.Errorf("results saved, but report generation failed: %w", err)
 		}
 		if progress != nil {
 			progress(fmt.Sprintf("%s: report available", report.StudentName))
+		}
+		if completed != nil {
+			completed(report)
 		}
 		return nil
 	})
@@ -128,7 +142,9 @@ func serveApplication(root string, port int) error {
 			return fmt.Errorf("regenerate static reports: %w", err)
 		}
 	}
-	srvConfig := server.Config{StaticDir: app.staticDir, Run: app.execute, List: app.results.List, Report: app.report}
+	srvConfig := server.Config{
+		StaticDir: app.staticDir, Run: app.execute, List: app.results.List, Report: app.report,
+	}
 	handler, err := server.New(srvConfig)
 	if err != nil {
 		return err

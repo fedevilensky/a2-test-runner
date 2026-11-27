@@ -33,11 +33,18 @@ func fingerprintRunner() string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func fingerprintExercise(ctx context.Context, dir string, n int, flags []string, timeout time.Duration, runnerIdentity string) string {
+func fingerprintExercise(
+	ctx context.Context, dir string, n int, flags []string, timeout time.Duration,
+	runnerIdentity string,
+) string {
 	if runnerIdentity == "" {
 		return ""
 	}
-	for _, name := range []string{"CPATH", "CPLUS_INCLUDE_PATH", "C_INCLUDE_PATH", "LIBRARY_PATH", "LD_LIBRARY_PATH", "GCC_EXEC_PREFIX", "COMPILER_PATH", "CLASSPATH", "JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"} {
+	for _, name := range []string{
+		"CPATH", "CPLUS_INCLUDE_PATH", "C_INCLUDE_PATH", "LIBRARY_PATH", "LD_LIBRARY_PATH",
+		"GCC_EXEC_PREFIX", "COMPILER_PATH", "CLASSPATH", "JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS",
+		"_JAVA_OPTIONS",
+	} {
 		if os.Getenv(name) != "" {
 			return ""
 		}
@@ -53,7 +60,12 @@ func fingerprintExercise(ctx context.Context, dir string, n int, flags []string,
 	} else {
 		for _, f := range flags {
 			switch {
-			case strings.HasPrefix(f, "-std="), strings.HasPrefix(f, "-O"), len(f) > 2 && strings.HasPrefix(f, "-I"), len(f) > 2 && strings.HasPrefix(f, "-D"), len(f) > 2 && strings.HasPrefix(f, "-U"), f == "-Wall", f == "-Wextra", f == "-Werror", f == "-Wpedantic", f == "-g", f == "-pedantic", f == "-pedantic-errors":
+			case strings.HasPrefix(f, "-std="), strings.HasPrefix(f, "-O"),
+				len(f) > 2 && strings.HasPrefix(f, "-I"),
+				len(f) > 2 && strings.HasPrefix(f, "-D"),
+				len(f) > 2 && strings.HasPrefix(f, "-U"),
+				f == "-Wall", f == "-Wextra", f == "-Werror", f == "-Wpedantic",
+				f == "-g", f == "-pedantic", f == "-pedantic-errors":
 			default:
 				return ""
 			}

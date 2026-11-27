@@ -22,7 +22,11 @@ import (
 
 func testServer(t *testing.T) *Server {
 	t.Helper()
-	s, err := New(Config{StaticDir: t.TempDir(), Run: func(context.Context, service.Config, func(string)) error { return nil }, List: func(context.Context) ([]models.StudentReportData, error) { return nil, nil }})
+	s, err := New(Config{
+		StaticDir: t.TempDir(),
+		Run:       func(context.Context, service.Config, func(string)) error { return nil },
+		List:      func(context.Context) ([]models.StudentReportData, error) { return nil, nil },
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +82,10 @@ func TestUploadPreservesFoldersAndRejectsTraversal(t *testing.T) {
 
 func TestRejectCrossOriginAndForeignHost(t *testing.T) {
 	s := testServer(t)
-	for _, tc := range []struct{ url, origin string }{{"http://example.com/api/status", ""}, {"http://localhost/api/status", "https://evil.example"}} {
+	for _, tc := range []struct{ url, origin string }{
+		{"http://example.com/api/status", ""},
+		{"http://localhost/api/status", "https://evil.example"},
+	} {
 		r := httptest.NewRequest(http.MethodGet, tc.url, nil)
 		r.Header.Set("Origin", tc.origin)
 		w := httptest.NewRecorder()
@@ -95,7 +102,9 @@ func TestDiscoverStudents(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(base, "student-one"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	r := httptest.NewRequest(http.MethodGet, "http://localhost/api/discover?base="+base+"&pattern=student*", nil)
+	r := httptest.NewRequest(
+		http.MethodGet, "http://localhost/api/discover?base="+base+"&pattern=student*", nil,
+	)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, r)
 	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "student-one") {
@@ -106,7 +115,9 @@ func TestDiscoverStudents(t *testing.T) {
 func TestRunHTTPPreservesSelectionsAndBuildOverrides(t *testing.T) {
 	received := make(chan service.Config, 1)
 	finish := make(chan struct{})
-	s, err := New(Config{StaticDir: t.TempDir(), Run: func(_ context.Context, cfg service.Config, progress func(string)) error {
+	s, err := New(Config{StaticDir: t.TempDir(), Run: func(
+		_ context.Context, cfg service.Config, progress func(string),
+	) error {
 		received <- cfg
 		progress("Running case")
 		<-finish
@@ -120,7 +131,11 @@ func TestRunHTTPPreservesSelectionsAndBuildOverrides(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	payload := `{"Timeout":12000000000,"TestsFolder":"/tests","Students":[{"Path":"/students/alice","Build":{"Standard":"c++20","Optimization":"-O3","Extra":["-Wall"]}}],"Selection":{"Exercises":{"2":["one.in.txt"]}},"Build":{"Standard":"c++11","Optimization":"-O0"}}`
+	payload := `{"Timeout":12000000000,"TestsFolder":"/tests",` +
+		`"Students":[{"Path":"/students/alice",` +
+		`"Build":{"Standard":"c++20","Optimization":"-O3","Extra":["-Wall"]}}],` +
+		`"Selection":{"Exercises":{"2":["one.in.txt"]}},` +
+		`"Build":{"Standard":"c++11","Optimization":"-O0"}}`
 	r := httptest.NewRequest(http.MethodPost, "http://localhost/api/run", strings.NewReader(payload))
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, r)
@@ -128,7 +143,10 @@ func TestRunHTTPPreservesSelectionsAndBuildOverrides(t *testing.T) {
 		t.Fatalf("run: %d %s", w.Code, w.Body.String())
 	}
 	cfg := <-received
-	if cfg.Timeout != 12*time.Second || cfg.TestsFolder != "/tests" || len(cfg.Students) != 1 || cfg.Students[0].Build.Optimization != "-O3" || cfg.Students[0].Build.Standard != "c++20" || len(cfg.Selection.Exercises[2]) != 1 || cfg.Selection.Exercises[2][0] != "one.in.txt" {
+	if cfg.Timeout != 12*time.Second || cfg.TestsFolder != "/tests" ||
+		len(cfg.Students) != 1 || cfg.Students[0].Build.Optimization != "-O3" ||
+		cfg.Students[0].Build.Standard != "c++20" || len(cfg.Selection.Exercises[2]) != 1 ||
+		cfg.Selection.Exercises[2][0] != "one.in.txt" {
 		t.Fatalf("unexpected config: %+v", cfg)
 	}
 	r = httptest.NewRequest(http.MethodPost, "http://localhost/api/run", strings.NewReader(payload))
@@ -141,8 +159,11 @@ func TestRunHTTPPreservesSelectionsAndBuildOverrides(t *testing.T) {
 }
 
 func TestCloseCancelsAndWaitsForRun(t *testing.T) {
-	started, canceled, release, closed := make(chan struct{}), make(chan struct{}), make(chan struct{}), make(chan error, 1)
-	s, err := New(Config{StaticDir: t.TempDir(), Run: func(ctx context.Context, _ service.Config, _ func(string)) error {
+	started, canceled := make(chan struct{}), make(chan struct{})
+	release, closed := make(chan struct{}), make(chan error, 1)
+	s, err := New(Config{StaticDir: t.TempDir(), Run: func(
+		ctx context.Context, _ service.Config, _ func(string),
+	) error {
 		close(started)
 		<-ctx.Done()
 		close(canceled)
@@ -152,7 +173,8 @@ func TestCloseCancelsAndWaitsForRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := httptest.NewRequest(http.MethodPost, "http://localhost/api/run", strings.NewReader(`{"TestsFolder":"/tests","Students":[{"Path":"/students/a"}]}`))
+	payload := `{"TestsFolder":"/tests","Students":[{"Path":"/students/a"}]}`
+	r := httptest.NewRequest(http.MethodPost, "http://localhost/api/run", strings.NewReader(payload))
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, r)
 	if w.Code != http.StatusAccepted {
@@ -180,7 +202,12 @@ func TestCloseCancelsAndWaitsForRun(t *testing.T) {
 
 func TestReportRouteUsesStudentName(t *testing.T) {
 	var got string
-	s, err := New(Config{StaticDir: t.TempDir(), Report: func(_ context.Context, id string) (templ.Component, error) { got = id; return templ.Raw("report"), nil }})
+	s, err := New(Config{StaticDir: t.TempDir(), Report: func(
+		_ context.Context, id string,
+	) (templ.Component, error) {
+		got = id
+		return templ.Raw("report"), nil
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +244,10 @@ func TestNativeFolderSelection(t *testing.T) {
 			t.Fatal(err)
 		}
 		w := httptest.NewRecorder()
-		s.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "http://localhost/api/pick-folder", bytes.NewReader(payload)))
+		request := httptest.NewRequest(
+			http.MethodPost, "http://localhost/api/pick-folder", bytes.NewReader(payload),
+		)
+		s.ServeHTTP(w, request)
 		if w.Code != tc.status {
 			t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
 		}
@@ -249,7 +279,9 @@ func TestExerciseDiscoveryReturnsInputFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	request := httptest.NewRequest(http.MethodGet, "http://localhost/api/exercises?"+url.Values{"path": {root}}.Encode(), nil)
+	request := httptest.NewRequest(
+		http.MethodGet, "http://localhost/api/exercises?"+url.Values{"path": {root}}.Encode(), nil,
+	)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, request)
 	if w.Code != http.StatusOK {
@@ -259,7 +291,9 @@ func TestExerciseDiscoveryReturnsInputFiles(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &exercises); err != nil {
 		t.Fatal(err)
 	}
-	if len(exercises) != 2 || exercises[0].Number != 2 || exercises[1].Number != 12 || exercises[1].Folder != "exercise12" || len(exercises[1].Cases) != 2 || exercises[1].Cases[0] != "large.in.txt" || exercises[1].Cases[1] != "small.in.txt" {
+	if len(exercises) != 2 || exercises[0].Number != 2 || exercises[1].Number != 12 ||
+		exercises[1].Folder != "exercise12" || len(exercises[1].Cases) != 2 ||
+		exercises[1].Cases[0] != "large.in.txt" || exercises[1].Cases[1] != "small.in.txt" {
 		t.Fatalf("unexpected exercises: %#v", exercises)
 	}
 }
@@ -269,7 +303,8 @@ func TestStaticReportsIncludeExistingFiles(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(root, "older student"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "older student", "report.html"), []byte("report"), 0o600); err != nil {
+	reportPath := filepath.Join(root, "older student", "report.html")
+	if err := os.WriteFile(reportPath, []byte("report"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Mkdir(filepath.Join(root, "empty"), 0o700); err != nil {
@@ -292,8 +327,15 @@ func TestStaticReportsIncludeExistingFiles(t *testing.T) {
 }
 
 func TestSummaryUsesStoredResults(t *testing.T) {
-	s, err := New(Config{StaticDir: t.TempDir(), List: func(context.Context) ([]models.StudentReportData, error) {
-		return []models.StudentReportData{{StudentName: "alice", Groups: []models.ExerciseGroup{{Exercise: 1, Results: []models.TestCaseResult{{Passed: true}}}}}}, nil
+	s, err := New(Config{StaticDir: t.TempDir(), List: func(
+		context.Context,
+	) ([]models.StudentReportData, error) {
+		return []models.StudentReportData{{
+			StudentName: "alice",
+			Groups: []models.ExerciseGroup{{
+				Exercise: 1, Results: []models.TestCaseResult{{Passed: true}},
+			}},
+		}}, nil
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -308,7 +350,66 @@ func TestSummaryUsesStoredResults(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
-	if w.Code != http.StatusOK || len(response.Students) != 1 || response.Students[0].Passed != 1 || len(response.Summary.Rows) != 1 || response.Summary.Rows[0].AllPass != 1 {
+	if w.Code != http.StatusOK || len(response.Students) != 1 ||
+		response.Students[0].Passed != 1 || len(response.Summary.Rows) != 1 ||
+		response.Summary.Rows[0].AllPass != 1 {
 		t.Fatalf("unexpected summary: status %d, %+v", w.Code, response)
+	}
+}
+
+func TestStatusRevisionTracksPublishedReportsWithoutLoadingResults(t *testing.T) {
+	root := t.TempDir()
+	static := filepath.Join(root, "static")
+	if err := os.MkdirAll(static, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	s, err := New(Config{StaticDir: static, List: func(
+		context.Context,
+	) ([]models.StudentReportData, error) {
+		t.Error("status polling loaded the full results")
+		return nil, nil
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	revision := func() string {
+		t.Helper()
+		w := httptest.NewRecorder()
+		s.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://localhost/api/status", nil))
+		var current status
+		if err := json.Unmarshal(w.Body.Bytes(), &current); err != nil {
+			t.Fatal(err)
+		}
+		if w.Code != http.StatusOK || current.ResultsRevision == "" {
+			t.Fatalf("invalid status: %d %s", w.Code, w.Body.String())
+		}
+		return current.ResultsRevision
+	}
+	before := revision()
+	if again := revision(); again != before {
+		t.Fatal("unchanged files produced different revisions")
+	}
+	student := filepath.Join(static, "alice")
+	if err := os.Mkdir(student, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	reportPath := filepath.Join(student, "report.html")
+	if err := os.WriteFile(reportPath, []byte("report"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	after := revision()
+	if before == after {
+		t.Fatal("new report did not change revision")
+	}
+	if err := os.Mkdir(filepath.Join(root, "data"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	wal := filepath.Join(root, "data", "results.sqlite-wal")
+	if err := os.WriteFile(wal, []byte("new results"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if revision() == after {
+		t.Fatal("database change did not change revision")
 	}
 }

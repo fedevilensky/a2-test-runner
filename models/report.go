@@ -52,6 +52,7 @@ type (
 		Rows        []SummaryRow
 	}
 )
+
 type SPAData struct {
 	Students []StudentReportData
 	Summary  SummaryReport

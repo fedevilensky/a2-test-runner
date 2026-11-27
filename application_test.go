@@ -30,7 +30,9 @@ func TestApplicationPersistsAndMergesPartialRerun(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write(filepath.Join(student, "ejercicio1.cpp"), "#include <iostream>\nint main(){int x;std::cin >> x;std::cout << x << std::endl;}\n")
+	write(filepath.Join(student,
+		"ejercicio1.cpp"),
+		"#include <iostream>\nint main(){int x;std::cin >> x;std::cout << x << std::endl;}\n")
 	for _, name := range []string{"1", "2"} {
 		write(filepath.Join(tests, name+".in.txt"), name)
 		write(filepath.Join(tests, name+".out.txt"), name+"\n")
@@ -44,15 +46,30 @@ func TestApplicationPersistsAndMergesPartialRerun(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	cfg := service.Config{TestsFolder: filepath.Dir(tests), Students: []models.StudentConfig{{Path: student}}, Build: models.BuildSettings{Optimization: "-O2"}}
+	cfg := service.Config{
+		TestsFolder: filepath.Dir(tests),
+		Students:    []models.StudentConfig{{Path: student}},
+		Build:       models.BuildSettings{Optimization: "-O2"},
+	}
 	if err = app.execute(context.Background(), cfg, nil); err != nil {
 		t.Fatal(err)
 	}
 	write(filepath.Join(tests, "1.out.txt"), "wrong\n")
 	cfg.Selection = models.ResultSelection{Exercises: map[int][]string{1: {"1.in.txt"}}}
 	cfg.Build.Optimization = "-O0"
-	if err = app.execute(context.Background(), cfg, nil); err != nil {
+	var completed []models.StudentReportData
+	if err = app.executeWithResults(context.Background(),
+		cfg,
+		nil,
+		func(report models.StudentReportData) {
+			completed = append(completed, report)
+		}); err != nil {
 		t.Fatal(err)
+	}
+	if len(completed) != 1 ||
+		completed[0].Total != 1 ||
+		completed[0].Groups[0].Results[0].InputFile != "1.in.txt" {
+		t.Fatalf("completed results must contain only the selected case: %#v", completed)
 	}
 	reports, err := app.results.List(context.Background())
 	if err != nil {
@@ -62,7 +79,9 @@ func TestApplicationPersistsAndMergesPartialRerun(t *testing.T) {
 		t.Fatalf("unexpected results: %#v", reports)
 	}
 	cases := reports[0].Groups[0].Results
-	if cases[0].Passed || !cases[1].Passed || strings.Join(cases[0].BuildFlags, " ") != "-std=c++11 -O0" || strings.Join(cases[1].BuildFlags, " ") != "-std=c++11 -O2" {
+	if cases[0].Passed || !cases[1].Passed || strings.Join(cases[0].BuildFlags,
+		" ") != "-std=c++11 -O0" || strings.Join(cases[1].BuildFlags,
+		" ") != "-std=c++11 -O2" {
 		t.Fatalf("partial results not preserved: %#v", cases)
 	}
 	for _, name := range []string{"index.html", "summary/index.html", "alice/report.html"} {
@@ -97,19 +116,27 @@ func TestApplicationPublishesEachStudentBeforeNextStarts(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = app.results.Close() })
 	checked := false
-	err = app.execute(context.Background(), service.Config{TestsFolder: filepath.Dir(tests), Students: []models.StudentConfig{{Path: alice}, {Path: bob}}}, func(message string) {
-		if message != "bob: compiling exercise 1" {
-			return
-		}
-		checked = true
-		stored, err := app.results.List(context.Background())
-		if err != nil || len(stored) != 1 || stored[0].StudentName != "alice" {
-			t.Errorf("first student not persisted before second starts: %#v, %v", stored, err)
-		}
-		if _, err := os.Stat(filepath.Join(root, "out", "static", "alice", "report.html")); err != nil {
-			t.Errorf("first student report not published: %v", err)
-		}
-	})
+	err = app.execute(context.Background(),
+		service.Config{
+			TestsFolder: filepath.Dir(tests),
+			Students: []models.StudentConfig{
+				{Path: alice},
+				{Path: bob},
+			},
+		},
+		func(message string) {
+			if message != "bob: compiling exercise 1" {
+				return
+			}
+			checked = true
+			stored, err := app.results.List(context.Background())
+			if err != nil || len(stored) != 1 || stored[0].StudentName != "alice" {
+				t.Errorf("first student not persisted before second starts: %#v, %v", stored, err)
+			}
+			if _, err := os.Stat(filepath.Join(root, "out", "static", "alice", "report.html")); err != nil {
+				t.Errorf("first student report not published: %v", err)
+			}
+		})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +163,9 @@ func TestIncrementalRunPersistsAndInvalidates(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write(filepath.Join(student, "ejercicio1.cpp"), "#include <iostream>\nint main(){int n;std::cin >> n;std::cout << n << '\\n';}\n")
+	write(filepath.Join(student,
+		"ejercicio1.cpp"),
+		"#include <iostream>\nint main(){int n;std::cin >> n;std::cout << n << '\\n';}\n")
 	for _, n := range []string{"1", "2"} {
 		write(filepath.Join(tests, n+".in.txt"), n)
 		write(filepath.Join(tests, n+".out.txt"), n+"\n")
@@ -150,7 +179,11 @@ func TestIncrementalRunPersistsAndInvalidates(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	cfg := service.Config{TestsFolder: filepath.Dir(tests), Students: []models.StudentConfig{{Path: student}}}
+	cfg := service.Config{
+		TestsFolder: filepath.Dir(tests),
+		Students:    []models.StudentConfig{{Path: student}},
+		Incremental: true,
+	}
 	run := func() []models.TestCaseResult {
 		t.Helper()
 		if err := app.execute(context.Background(), cfg, nil); err != nil {
@@ -206,7 +239,9 @@ func TestIncrementalRunOnlyRerunsAffectedExercise(t *testing.T) {
 		}
 		write(filepath.Join(dir, "1.in.txt"), "")
 		write(filepath.Join(dir, "1.out.txt"), n)
-		write(filepath.Join(student, "ejercicio"+n+".cpp"), "#include <iostream>\nint main(){std::cout << "+n+";}\n")
+		write(filepath.Join(student,
+			"ejercicio"+n+".cpp"),
+			"#include <iostream>\nint main(){std::cout << "+n+";}\n")
 	}
 	app, err := openApplication(filepath.Join(root, "out"))
 	if err != nil {
@@ -217,12 +252,19 @@ func TestIncrementalRunOnlyRerunsAffectedExercise(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	cfg := service.Config{TestsFolder: filepath.Join(root, "tests"), Students: []models.StudentConfig{{Path: student}}}
+	cfg := service.Config{
+		TestsFolder: filepath.Join(root,
+			"tests"),
+		Students:    []models.StudentConfig{{Path: student}},
+		Incremental: true,
+	}
 	if err := app.execute(context.Background(), cfg, nil); err != nil {
 		t.Fatal(err)
 	}
 	cfg.Incremental = true
-	write(filepath.Join(student, "ejercicio2.cpp"), "#include <iostream>\nint main(){std::cout << 2;} // changed\n")
+	write(filepath.Join(student,
+		"ejercicio2.cpp"),
+		"#include <iostream>\nint main(){std::cout << 2;} // changed\n")
 	if err := app.execute(context.Background(), cfg, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +272,9 @@ func TestIncrementalRunOnlyRerunsAffectedExercise(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(report.Groups) != 2 || !report.Groups[0].Results[0].Cached || report.Groups[1].Results[0].Cached {
+	if len(report.Groups) != 2 ||
+		!report.Groups[0].Results[0].Cached ||
+		report.Groups[1].Results[0].Cached {
 		t.Fatalf("unrelated exercise was invalidated: %+v", report.Groups)
 	}
 }
